@@ -1,16 +1,42 @@
 import { useState } from "react";
-import { Sparkles, Loader2 } from "lucide-react";
+import { Sparkles, Loader2, AlertCircle } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
-export function NotesTab({ title = 'this chapter' }) {
+export function NotesTab({ title = 'this chapter', chapterId = "1" }) {
   const [isGenerated, setIsGenerated] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [notesContent, setNotesContent] = useState("");
+  const [error, setError] = useState(null);
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     setIsGenerating(true);
-    setTimeout(() => {
-      setIsGenerating(false);
+    setError(null);
+    try {
+      const response = await fetch("http://localhost:8000/api/generate/notes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chapterId: chapterId, prompt: "" })
+      });
+      
+      if (!response.ok) {
+        throw new Error("Backend connection failed.");
+      }
+      
+      const data = await response.json();
+      setNotesContent(data.content);
       setIsGenerated(true);
-    }, 2000);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to connect to AI Backend. Ensure the FastAPI server is running with API keys.");
+      // Fallback for visual testing without backend
+      setTimeout(() => {
+        setNotesContent(`# ${title}\n\n*The backend server is either offline or missing API keys.* \n\n**Please configure your FastAPI backend.**`);
+        setIsGenerated(true);
+      }, 500);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   if (!isGenerated) {
@@ -39,102 +65,20 @@ export function NotesTab({ title = 'this chapter' }) {
     <div className="h-full overflow-auto" style={{ background: 'var(--bg-primary)' }}>
       <div className="max-w-4xl mx-auto px-6 py-12">
         <div className="space-y-8 animate-fade-up">
-          <div>
-            <h1 className="text-5xl font-bold mb-2 tracking-tight" style={{ color: 'var(--text-primary)' }}>
-              {title}
-            </h1>
-            <div className="text-sm" style={{ color: 'var(--text-muted)' }}>
-              Auto-generated notes · Last updated 2 hours ago
-            </div>
-          </div>
-
-          {/* Key Concepts */}
-          <section>
-            <h2 className="text-3xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>Key Concepts</h2>
-            
-            <div className="p-6 rounded-2xl border-l-4 mb-4" style={{
-              background: 'var(--accent-glow)',
-              borderColor: 'var(--accent-primary)',
-            }}>
-              <div className="font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
-                💡 What is a Chemical Reaction?
+          {error && (
+            <div className="p-4 mb-6 rounded-2xl flex items-start gap-3 border shadow-sm" style={{ background: 'var(--bg-tertiary)', borderColor: 'var(--border)' }}>
+              <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: 'var(--accent-warning)' }} />
+              <div className="text-[15px] font-medium" style={{ color: 'var(--text-primary)' }}>
+                {error}
               </div>
-              <p className="leading-relaxed text-[17px]" style={{ color: 'var(--text-secondary)' }}>
-                A process in which substances (reactants) are converted into different substances (products) 
-                through breaking and forming of chemical bonds.
-              </p>
             </div>
+          )}
 
-            <ul className="space-y-3 ml-2">
-              {[
-                "Reactants: Starting substances in a chemical reaction",
-                "Products: New substances formed after the reaction",
-                "Chemical bonds are broken in reactants and formed in products",
-              ].map((item, i) => (
-                <li key={i} className="flex items-start gap-3">
-                  <span className="w-1.5 h-1.5 rounded-full mt-2.5 flex-shrink-0" style={{ background: 'var(--accent-primary)' }} />
-                  <span className="text-[17px]" style={{ color: 'var(--text-secondary)' }}>{item}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-
-          {/* Types */}
-          <section>
-            <h2 className="text-3xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>Types of Chemical Reactions</h2>
-            <div className="space-y-4">
-              {[
-                { title: "1. Combination Reaction", desc: "Two or more substances combine to form a single product.", formula: "A + B → AB", example: "2Mg + O₂ → 2MgO" },
-                { title: "2. Decomposition Reaction", desc: "A single compound breaks down into two or more simpler substances.", formula: "AB → A + B", example: "2H₂O → 2H₂ + O₂" },
-                { title: "3. Displacement Reaction", desc: "One element displaces another element from its compound.", formula: "A + BC → AC + B", example: "Zn + CuSO₄ → ZnSO₄ + Cu" },
-              ].map((type, i) => (
-                <div key={i} className="p-6 rounded-2xl border" style={{
-                  background: 'var(--gradient-card)', borderColor: 'var(--border)', boxShadow: 'var(--shadow-sm)',
-                }}>
-                  <h3 className="font-bold mb-2" style={{ color: 'var(--text-primary)' }}>{type.title}</h3>
-                  <p className="mb-3 leading-relaxed text-[17px]" style={{ color: 'var(--text-secondary)' }}>{type.desc}</p>
-                  <div className="p-3 rounded-xl font-mono text-base mb-2" style={{
-                    background: 'var(--bg-tertiary)', color: 'var(--text-primary)',
-                  }}>
-                    {type.formula}
-                  </div>
-                  <div className="text-sm" style={{ color: 'var(--text-muted)' }}>Example: {type.example}</div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* Important Points */}
-          <section>
-            <h2 className="text-3xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>Important Points</h2>
-            <div className="p-6 rounded-2xl border-l-4" style={{
-              background: 'rgba(245, 158, 11, 0.06)', borderColor: 'var(--accent-warning)',
-            }}>
-              <ul className="space-y-3">
-                {[
-                  "Law of Conservation of Mass: Mass is neither created nor destroyed",
-                  "Chemical equations must be balanced",
-                  "Coefficients represent the number of molecules",
-                ].map((point, i) => (
-                  <li key={i} className="flex items-start gap-3">
-                    <span>⭐</span>
-                    <span className="text-[17px]" style={{ color: 'var(--text-secondary)' }}>{point}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </section>
-
-          {/* Visual */}
-          <section>
-            <h2 className="text-3xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>Visual Summary</h2>
-            <div className="p-14 rounded-2xl border text-center" style={{
-              background: 'var(--gradient-card)', borderColor: 'var(--border)', boxShadow: 'var(--shadow-sm)',
-            }}>
-              <div className="text-5xl mb-4">📊</div>
-              <p style={{ color: 'var(--text-muted)' }}>Diagram: Types of Chemical Reactions</p>
-            </div>
-          </section>
+          <div className="prose prose-lg dark:prose-invert max-w-none prose-headings:font-bold prose-a:text-blue-500">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {notesContent}
+            </ReactMarkdown>
+          </div>
         </div>
       </div>
     </div>

@@ -94,10 +94,10 @@ export function StudyWorkspace() {
       {/* Content */}
       <div className="flex-1 overflow-hidden">
         {activeTab === 'pdf' && <PDFTab title={chapterInfo.title} />}
-        {activeTab === 'chat' && <ChatTab title={chapterInfo.title} />}
-        {activeTab === 'notes' && <NotesTab title={chapterInfo.title} />}
-        {activeTab === 'mindmap' && <MindmapTab title={chapterInfo.title} />}
-        {activeTab === 'quiz' && <QuizTab title={chapterInfo.title} />}
+        {activeTab === 'chat' && <ChatTab title={chapterInfo.title} chapterId={chapterId} />}
+        {activeTab === 'notes' && <NotesTab title={chapterInfo.title} chapterId={chapterId} />}
+        {activeTab === 'mindmap' && <MindmapTab title={chapterInfo.title} chapterId={chapterId} />}
+        {activeTab === 'quiz' && <QuizTab title={chapterInfo.title} chapterId={chapterId} />}
       </div>
     </div>
   );
