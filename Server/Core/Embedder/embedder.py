@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import uuid
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -12,6 +13,9 @@ from Core.Storage.PostgresHandler import PostgresHandler
 from Core.Storage.VectorHandler import VectorHandler
 
 logger = logging.getLogger(__name__)
+
+# Regex to identify diagram-only placeholder content
+_RE_DIAGRAM_PLACEHOLDER = re.compile(r"^Diagram\s+\d+$", re.IGNORECASE)
 
 
 class EmbedderError(Exception):
@@ -66,7 +70,9 @@ class Embedder:
 
         raw_text, images = extract_pdf(pdf_path)
         structural_nodes = split_into_chunks(raw_text)
-        node_ids: List[str] = []
+
+        text_node_ids: List[str] = []
+        image_node_ids: List[str] = []
 
         # ── text nodes ──────────────────────────────────────────────
         for snode in structural_nodes:
@@ -75,7 +81,7 @@ class Embedder:
                     content=snode.full_content(),
                     chapter_id=str(chap_uuid),
                 )
-                node_ids.append(node_id)
+                text_node_ids.append(node_id)
             except Exception:
                 logger.exception("Skipping bad text chunk (len=%d)", len(snode.content))
 
@@ -88,7 +94,7 @@ class Embedder:
                     chapter_id=str(chap_uuid),
                     image_url=image_url,
                 )
-                node_ids.append(node_id)
+                image_node_ids.append(node_id)
                 logger.info(
                     "Stored image node #%d (%d bytes) → %s",
                     idx, len(img_bytes), image_url,
@@ -96,10 +102,12 @@ class Embedder:
             except Exception:
                 logger.exception("Skipping image #%d", idx)
 
-        # ── bulk embed ──────────────────────────────────────────────
-        await self.embed_nodes(node_ids)
+        # ── bulk embed TEXT nodes only ──────────────────────────────
+        # Diagram nodes have placeholder content ("Diagram N") which has
+        # no semantic value — skip embedding them.
+        await self.embed_nodes(text_node_ids)
 
-        return node_ids
+        return text_node_ids + image_node_ids
 
     # ──────────────────────────────────────────────────────────────────
     # 2. NODE CREATION
@@ -132,17 +140,17 @@ class Embedder:
         await self._vec.insert_embedding(uuid.UUID(node_id), vectors[0])
 
     # ──────────────────────────────────────────────────────────────────
-    # 4. BULK EMBEDDING (optimised)
+    # 4. BULK EMBEDDING (optimised – small batches)
     # ──────────────────────────────────────────────────────────────────
 
     async def embed_nodes(self, node_ids: List[str]) -> None:
         """Fetch content for all *node_ids*, embed in batches, and store.
 
-        Splits into batches of ``EMBED_BATCH_SIZE`` to stay within API limits
-        and stores each batch immediately so partial failures don't lose all
-        progress.
+        Splits into batches of ``EMBED_BATCH_SIZE`` to stay within Gemini
+        API limits.  Stores each batch immediately so partial failures
+        don't lose all progress.  Skips diagram-placeholder nodes.
         """
-        EMBED_BATCH_SIZE = 20  # Gemini batchEmbedContents is reliable at ≤20
+        EMBED_BATCH_SIZE = 5  # Gemini batchEmbedContents is strict
 
         if not node_ids:
             return
@@ -154,9 +162,11 @@ class Embedder:
         valid_ids: List[uuid.UUID] = []
         for node in nodes:
             content = (node.get("content") or "").strip()
-            if content:
-                texts.append(content)
-                valid_ids.append(node["id"])
+            # Skip diagram placeholders — no semantic value
+            if not content or _RE_DIAGRAM_PLACEHOLDER.match(content):
+                continue
+            texts.append(content)
+            valid_ids.append(node["id"])
 
         if not texts:
             return
@@ -203,7 +213,7 @@ class Embedder:
         logger.info("Embedding complete: %d/%d stored", stored, total)
 
     # ──────────────────────────────────────────────────────────────────
-    # 5. RETRIEVAL CHAIN
+    # 5. HYBRID RETRIEVAL CHAIN (vector + keyword, RRF merge)
     # ──────────────────────────────────────────────────────────────────
 
     async def retrieve(
@@ -212,28 +222,55 @@ class Embedder:
         chapter_id: str,
         limit: int = 10,
     ) -> List[Dict[str, Any]]:
-        """Embed the query, search for similar nodes, and return enriched results.
+        """Hybrid retrieve: vector similarity + keyword search merged via RRF.
 
-        Each result dict contains the full node record plus a ``similarity_score``.
+        Each result dict contains the full node record plus
+        ``similarity_score`` (from vector) and ``rrf_score`` (final rank).
         """
-        query_vec = (await self._embed.embed([query]))[0]
         chap_uuid = uuid.UUID(chapter_id)
 
-        results = await self._vec.search_similar(query_vec, chap_uuid, limit=limit)
-        if not results:
+        # ── Vector search ───────────────────────────────────────────
+        query_vec = (await self._embed.embed([query]))[0]
+        vec_results = await self._vec.search_similar(
+            query_vec, chap_uuid, limit=limit * 2
+        )
+
+        # ── Keyword search ──────────────────────────────────────────
+        kw_results = await self._pg.keyword_search_nodes(
+            query, chap_uuid, limit=limit * 2
+        )
+
+        # ── Reciprocal Rank Fusion (k=60) ───────────────────────────
+        K = 60
+        rrf_scores: Dict[uuid.UUID, float] = {}
+
+        for rank, r in enumerate(vec_results):
+            nid = r["node_id"]
+            rrf_scores[nid] = rrf_scores.get(nid, 0.0) + 1.0 / (K + rank + 1)
+
+        for rank, r in enumerate(kw_results):
+            nid = r["id"]
+            rrf_scores[nid] = rrf_scores.get(nid, 0.0) + 1.0 / (K + rank + 1)
+
+        if not rrf_scores:
             return []
 
-        matched_ids = [r["node_id"] for r in results]
-        nodes = await self._pg.get_nodes_by_ids(matched_ids)
+        # ── Fetch full node records ─────────────────────────────────
+        # Sort by RRF score, take top-limit
+        sorted_ids = sorted(rrf_scores, key=rrf_scores.get, reverse=True)[:limit]
+        nodes = await self._pg.get_nodes_by_ids(sorted_ids)
 
-        score_map = {r["node_id"]: r["similarity_score"] for r in results}
+        # Build similarity score map for display
+        vec_score_map = {r["node_id"]: r["similarity_score"] for r in vec_results}
 
         enriched: List[Dict[str, Any]] = []
         for node in nodes:
-            node["similarity_score"] = score_map.get(node["id"], 0.0)
+            nid = node["id"]
+            node["similarity_score"] = vec_score_map.get(nid, 0.0)
+            node["rrf_score"] = rrf_scores.get(nid, 0.0)
             enriched.append(node)
 
-        enriched.sort(key=lambda n: n["similarity_score"], reverse=True)
+        enriched.sort(key=lambda n: n["rrf_score"], reverse=True)
         return enriched
 
     # ──────────────────────────────────────────────────────────────────

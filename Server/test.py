@@ -38,12 +38,17 @@ class GeminiEmbedModel:
         self.client = genai.Client(api_key=api_key)
 
     async def embed(self, texts: list[str]) -> list[list[float]]:
-        response = await self.client.aio.models.embed_content(
-            model='gemini-embedding-2-preview',
-            contents=texts,
-        )
-        # Assumes response.embeddings has a `values` attribute for the float list
-        return [emb.values for emb in response.embeddings]
+        # Embed each text individually — Gemini's embed_content treats a
+        # list of strings as parts of ONE content (returning 1 embedding),
+        # not as separate items.
+        results: list[list[float]] = []
+        for text in texts:
+            response = await self.client.aio.models.embed_content(
+                model='gemini-embedding-2-preview',
+                contents=text,
+            )
+            results.append(response.embeddings[0].values)
+        return results
 
 
 async def main():

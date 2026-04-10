@@ -160,6 +160,34 @@ class PostgresHandler:
         )
         return [self._record_to_dict(r) for r in rows]
 
+    async def keyword_search_nodes(
+        self,
+        query: str,
+        chapter_id: uuid.UUID,
+        limit: int = 10,
+    ) -> List[Dict[str, Any]]:
+        """Full-text keyword search over node content using PostgreSQL ts_vector.
+
+        Returns nodes ranked by relevance, filtered to a chapter.
+        """
+        pool = self._pool_guard()
+        # plainto_tsquery handles natural-language queries safely
+        rows = await pool.fetch(
+            """
+            SELECT *,
+                   ts_rank_cd(to_tsvector('english', content), plainto_tsquery('english', $1)) AS rank
+            FROM core.nodes
+            WHERE chapter_id = $2
+              AND to_tsvector('english', content) @@ plainto_tsquery('english', $1)
+            ORDER BY rank DESC
+            LIMIT $3
+            """,
+            query,
+            chapter_id,
+            limit,
+        )
+        return [self._record_to_dict(r) for r in rows]
+
     # ------------------------------------------------------------------
     # User Progress
     # ------------------------------------------------------------------

@@ -1,9 +1,8 @@
-"""RAG chat script – query existing embeddings and curate an answer.
+"""RAG chat script – hybrid retrieval + query expansion.
 
-Connects to pgvector, finds the most relevant nodes for a hardcoded
-question from lebo101.pdf (NCERT Biology Ch. 1 – The Living World),
-then asks Gemini to compose a structured answer, inlining diagram URLs
-where images are attached to retrieved nodes.
+Connects to pgvector + PostgreSQL, finds the most relevant nodes for a
+hardcoded question from lebo101.pdf using hybrid search (vector + keyword),
+then asks Gemini to compose a structured answer with diagram URLs.
 """
 
 import asyncio
@@ -14,6 +13,8 @@ import textwrap
 from dotenv import load_dotenv
 from google import genai
 
+from Core.Embedder import Embedder
+from Core.Storage.BucketHandler import BucketHandler
 from Core.Storage.PostgresHandler import PostgresHandler
 from Core.Storage.VectorHandler import VectorHandler
 
@@ -25,7 +26,7 @@ logger = logging.getLogger(__name__)
 QUESTION = "Who was Panchanan Maheshwari and what field did he contribute to?"
 
 
-# ─── Gemini wrappers (same as test.py) ──────────────────────────────
+# ─── Gemini wrappers ────────────────────────────────────────────────
 
 class GeminiLLM:
     def __init__(self, api_key: str):
@@ -44,28 +45,31 @@ class GeminiEmbedModel:
         self.client = genai.Client(api_key=api_key)
 
     async def embed(self, texts: list[str]) -> list[list[float]]:
-        response = await self.client.aio.models.embed_content(
-            model="gemini-embedding-2-preview",
-            contents=texts,
-        )
-        return [emb.values for emb in response.embeddings]
+        # Embed each text individually — Gemini's embed_content treats a
+        # list of strings as parts of ONE content (returning 1 embedding),
+        # not as separate items.
+        results: list[list[float]] = []
+        for text in texts:
+            response = await self.client.aio.models.embed_content(
+                model="gemini-embedding-2-preview",
+                contents=text,
+            )
+            results.append(response.embeddings[0].values)
+        return results
 
 
 # ─── helpers ────────────────────────────────────────────────────────
 
 def build_context_block(nodes):
-    """Build a numbered context string from retrieved nodes.
-
-    If a node has an image_url, include it as a markdown image link so the
-    LLM can reference the diagram in its answer.
-    """
+    """Build a numbered context string from retrieved nodes."""
     parts = []
     for i, node in enumerate(nodes, 1):
         content = node.get("content", "")
         image_url = node.get("image_url")
-        score = node.get("similarity_score", 0.0)
+        rrf = node.get("rrf_score", 0.0)
+        vec = node.get("similarity_score", 0.0)
 
-        block = f"--- Context {i}  (score: {score:.4f}) ---\n{content}"
+        block = f"--- Context {i}  (rrf={rrf:.4f}  vec={vec:.4f}) ---\n{content}"
         if image_url:
             block += f"\n[Diagram: {image_url}]"
         parts.append(block)
@@ -109,6 +113,7 @@ async def main():
 
     pg = PostgresHandler()
     vec = VectorHandler()
+    bucket = BucketHandler()
 
     try:
         await pg.connect()
@@ -118,6 +123,11 @@ async def main():
         logger.error(f"DB connection failed: {e}")
         return
 
+    embedder = Embedder(
+        pg=pg, vec=vec, bucket=bucket,
+        llm_client=llm, embed_model=embed_model,
+    )
+
     try:
         # ── 1. Find the chapter ──────────────────────────────────────
         pool = pg._pool_guard()
@@ -125,42 +135,38 @@ async def main():
             "SELECT id FROM core.chapters ORDER BY created_at DESC LIMIT 1"
         )
         if not row:
-            logger.error("No chapters found in the database. Run test.py first to ingest lebo101.pdf.")
+            logger.error("No chapters found. Run test.py first.")
             return
-        chapter_id = row["id"]
+        chapter_id = str(row["id"])
         logger.info(f"Using chapter: {chapter_id}")
 
-        # ── 2. Embed the question ───────────────────────────────────
+        # ── 2. Hybrid retrieve ──────────────────────────────────────
         logger.info(f"Question: {QUESTION}")
-        query_vec = (await embed_model.embed([QUESTION]))[0]
 
-        # ── 3. Search pgvector for top-k similar nodes ──────────────
-        TOP_K = 8
-        results = await vec.search_similar(query_vec, chapter_id, limit=TOP_K)
-        if not results:
-            logger.warning("No similar nodes found. Is the chapter embedded?")
+        TOP_K = 12
+        nodes = await embedder.retrieve(QUESTION, chapter_id, limit=TOP_K)
+
+        # Filter out diagram-only placeholder nodes (no useful text)
+        nodes = [n for n in nodes if not (
+            n.get("content", "").strip().startswith("Diagram ")
+            and len(n.get("content", "").strip()) < 20
+        )]
+
+        if not nodes:
+            logger.warning("No relevant nodes found.")
             return
-
-        matched_ids = [r["node_id"] for r in results]
-        nodes = await pg.get_nodes_by_ids(matched_ids)
-
-        # Attach similarity scores
-        score_map = {r["node_id"]: r["similarity_score"] for r in results}
-        for node in nodes:
-            node["similarity_score"] = score_map.get(node["id"], 0.0)
-        nodes.sort(key=lambda n: n["similarity_score"], reverse=True)
 
         logger.info(f"Retrieved {len(nodes)} relevant nodes.")
 
-        # ── 4. Build context & prompt ───────────────────────────────
+        # ── 3. Build context & prompt ───────────────────────────────
         context = build_context_block(nodes)
         prompt = build_prompt(QUESTION, context)
 
-        # ── 5. Ask Gemini ───────────────────────────────────────────
+        # ── 4. Ask Gemini ───────────────────────────────────────────
         logger.info("Generating answer via Gemini...")
         answer = await llm.generate(prompt)
 
-        # ── 6. Print ────────────────────────────────────────────────
+        # ── 5. Print ────────────────────────────────────────────────
         print("\n" + "=" * 72)
         print(f"  QUESTION: {QUESTION}")
         print("=" * 72)
@@ -168,13 +174,14 @@ async def main():
         print(answer)
         print()
         print("=" * 72)
-        print("  RETRIEVED NODES")
+        print("  RETRIEVED NODES (hybrid: vector + keyword, RRF ranked)")
         print("=" * 72)
         for i, node in enumerate(nodes, 1):
-            score = node.get("similarity_score", 0)
+            rrf = node.get("rrf_score", 0)
+            vec_s = node.get("similarity_score", 0)
             img = node.get("image_url")
             snippet = (node.get("content") or "")[:120].replace("\n", " ")
-            line = f"  {i}. [score={score:.4f}] {snippet}..."
+            line = f"  {i}. [rrf={rrf:.4f} vec={vec_s:.4f}] {snippet}..."
             if img:
                 line += f"\n     📊 Image: {img}"
             print(line)
