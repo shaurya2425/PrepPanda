@@ -6,7 +6,7 @@ import logging
 import uuid
 from typing import Any, Dict, List, Optional
 
-from Core.Embedder.classifier import classify_batch
+from Core.Embedder.classifier import classify_chunk
 from Core.Embedder.constants import DEFAULT_NODE_TYPE, VALID_NODE_TYPES
 from Core.Embedder.parser import StructuralNode, extract_pdf, split_into_chunks
 from Core.Storage.BucketHandler import BucketHandler
@@ -70,27 +70,16 @@ class Embedder:
         structural_nodes = split_into_chunks(raw_text)
         node_ids: List[str] = []
 
-        # ── batch LLM classification for nodes without a structural hint ──
-        # Nodes with node_hint (e.g. Definition, Example) skip LLM entirely.
-        needs_llm = [(i, sn) for i, sn in enumerate(structural_nodes) if not sn.node_hint]
-        node_types = [sn.node_hint or DEFAULT_NODE_TYPE for sn in structural_nodes]
-
-        logger.info(
-            "Parser created %d total chunks. %d require LLM classification, %d already Hinted.",
-            len(structural_nodes),
-            len(needs_llm),
-            len(structural_nodes) - len(needs_llm),
-        )
-
-        if needs_llm:
-            texts_to_classify = [sn.content for _, sn in needs_llm]
-            batch_labels = await classify_batch(self._llm, texts_to_classify)
-            for (i, _), label in zip(needs_llm, batch_labels):
-                node_types[i] = label
-
         # ── text nodes ──────────────────────────────────────────────
-        for snode, node_type in zip(structural_nodes, node_types):
+        for snode in structural_nodes:
             try:
+                # Use parser's structural hint when available; fall back to LLM
+                if snode.node_hint:
+                    node_type = snode.node_hint
+                else:
+                    node_type = await classify_chunk(self._llm, snode.content)
+
+                # Embed with full context (section breadcrumb + content)
                 node_id = await self.create_node(
                     content=snode.full_content(),
                     node_type=node_type,
