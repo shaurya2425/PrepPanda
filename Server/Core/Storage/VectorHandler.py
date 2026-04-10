@@ -62,7 +62,7 @@ class VectorHandler:
         await pool.execute(
             """
             INSERT INTO vector.embeddings (node_id, embedding, created_at)
-            VALUES ($1, $2::vector.vector, $3)
+            VALUES ($1, $2::vector, $3)
             ON CONFLICT (node_id) DO UPDATE
                 SET embedding   = EXCLUDED.embedding,
                     created_at  = EXCLUDED.created_at
@@ -90,7 +90,7 @@ class VectorHandler:
             await conn.executemany(
                 """
                 INSERT INTO vector.embeddings (node_id, embedding, created_at)
-                VALUES ($1, $2::vector.vector, $3)
+                Values ($1, $2::vector, $3)
                 ON CONFLICT (node_id) DO UPDATE
                     SET embedding   = EXCLUDED.embedding,
                         created_at  = EXCLUDED.created_at
@@ -117,11 +117,11 @@ class VectorHandler:
             """
             SELECT
                 e.node_id,
-                1 - (e.embedding <=> $1::vector.vector) AS similarity_score
+                1 - (e.embedding <=> $1::vector) AS similarity_score
             FROM vector.embeddings e
             JOIN core.nodes n ON n.id = e.node_id
             WHERE n.chapter_id = $2
-            ORDER BY e.embedding <=> $1::vector.vector
+            ORDER BY e.embedding <=> $1::vector
             LIMIT $3
             """,
             self._embedding_to_pg(query_embedding),

@@ -4,8 +4,8 @@
 CREATE SCHEMA IF NOT EXISTS core;
 CREATE SCHEMA IF NOT EXISTS vector;
 
--- Enable pgvector extension
-CREATE EXTENSION IF NOT EXISTS vector SCHEMA vector;
+-- Enable pgvector extension (must be in public for operators like <=> to work)
+CREATE EXTENSION IF NOT EXISTS vector;
 
 -- Users
 CREATE TABLE IF NOT EXISTS core.users (
@@ -55,6 +55,6 @@ CREATE TABLE IF NOT EXISTS core.chat_history (
 -- Vector embeddings (pgvector)
 CREATE TABLE IF NOT EXISTS vector.embeddings (
     node_id     UUID PRIMARY KEY REFERENCES core.nodes(id) ON DELETE CASCADE,
-    embedding   vector.vector(3072),   -- gemini-embedding-2-preview outputs 3072 dims
+    embedding   vector(3072),   -- gemini-embedding-2-preview outputs 3072 dims
     created_at  TIMESTAMPTZ NOT NULL
 );

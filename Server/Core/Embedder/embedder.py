@@ -136,7 +136,14 @@ class Embedder:
     # ──────────────────────────────────────────────────────────────────
 
     async def embed_nodes(self, node_ids: List[str]) -> None:
-        """Fetch content for all *node_ids*, embed in batch, and store."""
+        """Fetch content for all *node_ids*, embed in batches, and store.
+
+        Splits into batches of ``EMBED_BATCH_SIZE`` to stay within API limits
+        and stores each batch immediately so partial failures don't lose all
+        progress.
+        """
+        EMBED_BATCH_SIZE = 20  # Gemini batchEmbedContents is reliable at ≤20
+
         if not node_ids:
             return
 
@@ -154,21 +161,46 @@ class Embedder:
         if not texts:
             return
 
-        embeddings = await self._embed.embed(texts)
+        total = len(texts)
+        stored = 0
 
-        # Batch-insert all embeddings in one round-trip
-        pairs: List[Tuple[uuid.UUID, List[float]]] = list(zip(valid_ids, embeddings))
-        try:
-            await self._vec.batch_insert_embeddings(pairs)
-            logger.info("Batch-inserted %d embeddings", len(pairs))
-        except Exception:
-            # Fall back to one-by-one if batch fails
-            logger.warning("Batch insert failed, falling back to individual inserts")
-            for nid, vec in pairs:
-                try:
-                    await self._vec.insert_embedding(nid, vec)
-                except Exception:
-                    logger.exception("Failed to store embedding for node %s", nid)
+        for start in range(0, total, EMBED_BATCH_SIZE):
+            end = min(start + EMBED_BATCH_SIZE, total)
+            batch_texts = texts[start:end]
+            batch_ids = valid_ids[start:end]
+
+            try:
+                embeddings = await self._embed.embed(batch_texts)
+            except Exception:
+                logger.exception(
+                    "Embed API failed for batch %d–%d, skipping", start, end
+                )
+                continue
+
+            pairs: List[Tuple[uuid.UUID, List[float]]] = list(
+                zip(batch_ids, embeddings)
+            )
+            try:
+                await self._vec.batch_insert_embeddings(pairs)
+                stored += len(pairs)
+                logger.info(
+                    "Embedded batch %d–%d (%d/%d)", start, end, stored, total
+                )
+            except Exception:
+                logger.warning(
+                    "Batch insert failed for %d–%d, falling back to individual",
+                    start, end,
+                )
+                for nid, vec in pairs:
+                    try:
+                        await self._vec.insert_embedding(nid, vec)
+                        stored += 1
+                    except Exception:
+                        logger.exception(
+                            "Failed to store embedding for node %s", nid
+                        )
+
+        logger.info("Embedding complete: %d/%d stored", stored, total)
 
     # ──────────────────────────────────────────────────────────────────
     # 5. RETRIEVAL CHAIN
