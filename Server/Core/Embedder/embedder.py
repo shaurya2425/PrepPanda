@@ -4,10 +4,8 @@ from __future__ import annotations
 
 import logging
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
-from Core.Embedder.classifier import classify_chunk
-from Core.Embedder.constants import DEFAULT_NODE_TYPE, VALID_NODE_TYPES
 from Core.Embedder.parser import StructuralNode, extract_pdf, split_into_chunks
 from Core.Storage.BucketHandler import BucketHandler
 from Core.Storage.PostgresHandler import PostgresHandler
@@ -73,16 +71,8 @@ class Embedder:
         # ── text nodes ──────────────────────────────────────────────
         for snode in structural_nodes:
             try:
-                # Use parser's structural hint when available; fall back to LLM
-                if snode.node_hint:
-                    node_type = snode.node_hint
-                else:
-                    node_type = await classify_chunk(self._llm, snode.content)
-
-                # Embed with full context (section breadcrumb + content)
                 node_id = await self.create_node(
                     content=snode.full_content(),
-                    node_type=node_type,
                     chapter_id=str(chap_uuid),
                 )
                 node_ids.append(node_id)
@@ -95,11 +85,14 @@ class Embedder:
                 image_url = self._upload_image(img_bytes, chapter_id, idx)
                 node_id = await self.create_node(
                     content=f"Diagram {idx + 1}",
-                    node_type="diagram",
                     chapter_id=str(chap_uuid),
                     image_url=image_url,
                 )
                 node_ids.append(node_id)
+                logger.info(
+                    "Stored image node #%d (%d bytes) → %s",
+                    idx, len(img_bytes), image_url,
+                )
             except Exception:
                 logger.exception("Skipping image #%d", idx)
 
@@ -115,19 +108,14 @@ class Embedder:
     async def create_node(
         self,
         content: str,
-        node_type: str,
         chapter_id: str,
         tags: Optional[List[str]] = None,
         image_url: Optional[str] = None,
     ) -> str:
         """Persist a single node and return its ``node_id`` as a string."""
-        if node_type not in VALID_NODE_TYPES:
-            node_type = DEFAULT_NODE_TYPE
-
         node_data: Dict[str, Any] = {
             "chapter_id": uuid.UUID(chapter_id),
             "content": content,
-            "type": node_type,
             "tags": tags or [],
             "image_url": image_url,
         }
@@ -144,7 +132,7 @@ class Embedder:
         await self._vec.insert_embedding(uuid.UUID(node_id), vectors[0])
 
     # ──────────────────────────────────────────────────────────────────
-    # 4. BULK EMBEDDING
+    # 4. BULK EMBEDDING (optimised)
     # ──────────────────────────────────────────────────────────────────
 
     async def embed_nodes(self, node_ids: List[str]) -> None:
@@ -168,11 +156,19 @@ class Embedder:
 
         embeddings = await self._embed.embed(texts)
 
-        for nid, vec in zip(valid_ids, embeddings):
-            try:
-                await self._vec.insert_embedding(nid, vec)
-            except Exception:
-                logger.exception("Failed to store embedding for node %s", nid)
+        # Batch-insert all embeddings in one round-trip
+        pairs: List[Tuple[uuid.UUID, List[float]]] = list(zip(valid_ids, embeddings))
+        try:
+            await self._vec.batch_insert_embeddings(pairs)
+            logger.info("Batch-inserted %d embeddings", len(pairs))
+        except Exception:
+            # Fall back to one-by-one if batch fails
+            logger.warning("Batch insert failed, falling back to individual inserts")
+            for nid, vec in pairs:
+                try:
+                    await self._vec.insert_embedding(nid, vec)
+                except Exception:
+                    logger.exception("Failed to store embedding for node %s", nid)
 
     # ──────────────────────────────────────────────────────────────────
     # 5. RETRIEVAL CHAIN
@@ -216,15 +212,6 @@ class Embedder:
         """Return all nodes belonging to a chapter."""
         return await self._pg.get_nodes_by_chapter(uuid.UUID(chapter_id))
 
-    async def get_nodes_by_type(
-        self,
-        chapter_id: str,
-        node_type: str,
-    ) -> List[Dict[str, Any]]:
-        """Return nodes of a specific type within a chapter."""
-        all_nodes = await self._pg.get_nodes_by_chapter(uuid.UUID(chapter_id))
-        return [n for n in all_nodes if n.get("type") == node_type]
-
     async def get_important_nodes(
         self,
         chapter_id: str,
@@ -245,5 +232,16 @@ class Embedder:
         index: int,
     ) -> str:
         """Upload diagram bytes to the bucket and return the public URL."""
-        filename = f"diagrams/{chapter_id}/{index}.png"
+        filename = f"chapters/{chapter_id}/diagrams/{index}.png"
         return self._bucket.upload_bytes(img_bytes, filename, "image/png")
+
+    def _upload_pdf(
+        self,
+        pdf_bytes: bytes,
+        chapter_id: str,
+        pdf_name: str,
+    ) -> str:
+        """Upload the source PDF to the bucket and return the public URL."""
+        safe_name = pdf_name.replace(" ", "_")
+        filename = f"chapters/{chapter_id}/pdf/{safe_name}"
+        return self._bucket.upload_bytes(pdf_bytes, filename, "application/pdf")

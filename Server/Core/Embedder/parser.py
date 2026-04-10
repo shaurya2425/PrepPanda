@@ -10,15 +10,22 @@ downstream consumers know *where* in the book the content came from.
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import re
 from dataclasses import dataclass, field
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import fitz
 import spacy
 
-from Core.Embedder.constants import MAX_CHUNK_WORDS, MIN_CHUNK_CHARS, SPACY_MODEL
+from Core.Embedder.constants import (
+    MAX_CHUNK_WORDS,
+    MIN_CHUNK_CHARS,
+    MIN_IMAGE_AREA,
+    MIN_IMAGE_DIMENSION,
+    SPACY_MODEL,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +78,6 @@ class StructuralNode:
     content: str
     heading: Optional[str] = None
     section_path: List[str] = field(default_factory=list)
-    node_hint: Optional[str] = None  # definition | example | process | concept | None
 
     def context_prefix(self) -> str:
         """Return a human-readable breadcrumb like ``'1.1 Motion > Definition'``."""
@@ -89,17 +95,42 @@ class StructuralNode:
 
 
 # ──────────────────────────────────────────────────────────────────────
-# PDF Extraction
+# PDF Extraction — robust image handling
 # ──────────────────────────────────────────────────────────────────────
 
+def _is_blank_image(pix: fitz.Pixmap) -> bool:
+    """Return True if every pixel in *pix* has the same colour (solid fill)."""
+    samples = pix.samples  # raw bytes
+    bpp = pix.n             # bytes per pixel
+    if len(samples) < bpp:
+        return True
+    first_pixel = samples[:bpp]
+    # Check a strided subset for speed (every 64th pixel)
+    stride = max(bpp, bpp * 64)
+    for offset in range(0, len(samples), stride):
+        if samples[offset : offset + bpp] != first_pixel:
+            return False
+    return True
+
+
+def _content_hash(data: bytes) -> str:
+    """Fast content hash for deduplication."""
+    return hashlib.md5(data).hexdigest()
+
+
 def extract_pdf(pdf_path: str) -> Tuple[str, List[bytes]]:
-    """Extract plain text and raster images from a PDF.
+    """Extract plain text and meaningful raster images from a PDF.
 
     Returns ``(full_text, [image_bytes_png, ...])``.
+
+    Image extraction renders each image *from the page* rather than pulling
+    raw xref data.  This guarantees correct colourspace, SMask compositing,
+    and alpha handling — fixing the "black screen" bug.
     """
     doc = fitz.open(pdf_path)
     text_parts: List[str] = []
     images: List[bytes] = []
+    seen_hashes: Dict[str, bool] = {}
 
     for page in doc:
         text_parts.append(page.get_text("text"))
@@ -107,10 +138,46 @@ def extract_pdf(pdf_path: str) -> Tuple[str, List[bytes]]:
         for img_info in page.get_images(full=True):
             xref = img_info[0]
             try:
-                pix = fitz.Pixmap(doc, xref)
-                if pix.n > 4:  # CMYK → RGB
-                    pix = fitz.Pixmap(fitz.csRGB, pix)
-                images.append(pix.tobytes("png"))
+                # Get the rectangle(s) where this image is placed on the page
+                rects = page.get_image_rects(xref)
+                if not rects:
+                    continue
+
+                rect = rects[0]  # use the first placement
+
+                # Skip tiny / decorative images
+                width = rect.width
+                height = rect.height
+                if width < MIN_IMAGE_DIMENSION or height < MIN_IMAGE_DIMENSION:
+                    continue
+                if width * height < MIN_IMAGE_AREA:
+                    continue
+
+                # Render from the page (respects SMask, colorspace, transforms)
+                # Use a 2x scale matrix for decent quality
+                mat = fitz.Matrix(2, 2)
+                pix = page.get_pixmap(clip=rect, matrix=mat, alpha=False)
+
+                # Skip solid-colour images (blank / black fills)
+                if _is_blank_image(pix):
+                    logger.debug(
+                        "Skipping blank image xref=%d on page %d", xref, page.number
+                    )
+                    continue
+
+                png_bytes = pix.tobytes("png")
+
+                # Deduplicate by content hash
+                h = _content_hash(png_bytes)
+                if h in seen_hashes:
+                    continue
+                seen_hashes[h] = True
+
+                images.append(png_bytes)
+                logger.debug(
+                    "Extracted image xref=%d page=%d size=%dx%d (%d bytes)",
+                    xref, page.number, pix.width, pix.height, len(png_bytes),
+                )
             except Exception:
                 logger.debug("Could not extract image xref=%d", xref)
 
@@ -138,19 +205,6 @@ def _is_heading(line: str) -> bool:
     return False
 
 
-def _detect_node_hint(line: str) -> Optional[str]:
-    """Detect NCERT-specific markers to pre-classify the upcoming block."""
-    if _RE_DEFINITION.match(line):
-        return "definition"
-    if _RE_EXAMPLE.match(line):
-        return "example"
-    if _RE_ACTIVITY.match(line):
-        return "process"
-    if _RE_SUMMARY.match(line) or _RE_QUESTION.match(line):
-        return "concept"
-    return None
-
-
 # ──────────────────────────────────────────────────────────────────────
 # Structure-Aware Chunking
 # ──────────────────────────────────────────────────────────────────────
@@ -164,11 +218,9 @@ def split_into_chunks(text: str) -> List[StructuralNode]:
        hierarchy) like a stack.
     2. When a heading is detected, flush the current chunk and update the
        section context.
-    3. NCERT markers (Definition, Example, Activity …) set a ``node_hint``
-       on the resulting chunk so the classifier can short-circuit.
-    4. Within a section, sentences are grouped into chunks respecting
+    3. Within a section, sentences are grouped into chunks respecting
        ``MAX_CHUNK_WORDS`` using spaCy for proper sentence boundaries.
-    5. Drops chunks shorter than ``MIN_CHUNK_CHARS``.
+    4. Drops chunks shorter than ``MIN_CHUNK_CHARS``.
     """
     nlp = _get_nlp()
     lines = text.split("\n")
@@ -177,7 +229,6 @@ def split_into_chunks(text: str) -> List[StructuralNode]:
     # Running state
     section_stack: List[str] = []
     current_heading: Optional[str] = None
-    current_hint: Optional[str] = None
     buffer: List[str] = []
 
     def _flush() -> None:
@@ -195,7 +246,6 @@ def split_into_chunks(text: str) -> List[StructuralNode]:
                     content=raw,
                     heading=current_heading,
                     section_path=list(section_stack),
-                    node_hint=current_hint,
                 )
             )
             return
@@ -219,7 +269,6 @@ def split_into_chunks(text: str) -> List[StructuralNode]:
                             content=chunk_text,
                             heading=current_heading,
                             section_path=list(section_stack),
-                            node_hint=current_hint,
                         )
                     )
                 current_sents = []
@@ -236,7 +285,6 @@ def split_into_chunks(text: str) -> List[StructuralNode]:
                         content=chunk_text,
                         heading=current_heading,
                         section_path=list(section_stack),
-                        node_hint=current_hint,
                     )
                 )
 
@@ -267,14 +315,7 @@ def split_into_chunks(text: str) -> List[StructuralNode]:
                 section_stack.append(stripped)
 
             current_heading = stripped
-            current_hint = _detect_node_hint(stripped)
             continue
-
-        # Check for NCERT marker mid-section (e.g. "Definition:" inline)
-        hint = _detect_node_hint(stripped)
-        if hint and buffer:
-            _flush()
-            current_hint = hint
 
         buffer.append(stripped)
 

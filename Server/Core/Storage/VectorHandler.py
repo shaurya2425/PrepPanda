@@ -1,7 +1,7 @@
 import os
 import uuid
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import asyncpg
 
@@ -62,7 +62,7 @@ class VectorHandler:
         await pool.execute(
             """
             INSERT INTO vector.embeddings (node_id, embedding, created_at)
-            VALUES ($1, $2::vector, $3)
+            VALUES ($1, $2::vector.vector, $3)
             ON CONFLICT (node_id) DO UPDATE
                 SET embedding   = EXCLUDED.embedding,
                     created_at  = EXCLUDED.created_at
@@ -71,6 +71,32 @@ class VectorHandler:
             self._embedding_to_pg(embedding),
             datetime.utcnow(),
         )
+
+    async def batch_insert_embeddings(
+        self,
+        pairs: List[Tuple[uuid.UUID, List[float]]],
+    ) -> None:
+        """Insert multiple embeddings in a single DB round-trip.
+
+        Each element of *pairs* is ``(node_id, embedding_vector)``.
+        Uses a single transaction with ``executemany`` for efficiency.
+        """
+        if not pairs:
+            return
+        pool = self._pool_guard()
+        now = datetime.utcnow()
+        args = [(nid, self._embedding_to_pg(vec), now) for nid, vec in pairs]
+        async with pool.acquire() as conn:
+            await conn.executemany(
+                """
+                INSERT INTO vector.embeddings (node_id, embedding, created_at)
+                VALUES ($1, $2::vector.vector, $3)
+                ON CONFLICT (node_id) DO UPDATE
+                    SET embedding   = EXCLUDED.embedding,
+                        created_at  = EXCLUDED.created_at
+                """,
+                args,
+            )
 
     # ------------------------------------------------------------------
     # Search
@@ -91,11 +117,11 @@ class VectorHandler:
             """
             SELECT
                 e.node_id,
-                1 - (e.embedding <=> $1::vector) AS similarity_score
+                1 - (e.embedding <=> $1::vector.vector) AS similarity_score
             FROM vector.embeddings e
             JOIN core.nodes n ON n.id = e.node_id
             WHERE n.chapter_id = $2
-            ORDER BY e.embedding <=> $1::vector
+            ORDER BY e.embedding <=> $1::vector.vector
             LIMIT $3
             """,
             self._embedding_to_pg(query_embedding),

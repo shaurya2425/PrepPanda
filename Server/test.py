@@ -105,7 +105,7 @@ async def main():
         return
 
     logger.info(f"Starting Embedder pipeline for: {pdf_path}")
-    logger.info("This will extract text, chunk it structurally, ask Gemini for types, and insert nodes & embeddings...")
+    logger.info("This will extract text, chunk it structurally, and insert nodes & embeddings...")
 
     try:
         node_ids = await embedder.process_pdf(chapter_id, pdf_path)

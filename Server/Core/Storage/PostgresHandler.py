@@ -112,7 +112,7 @@ class PostgresHandler:
     async def create_node(self, node_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         node_data keys:
-            chapter_id (UUID), content (str), type (str),
+            chapter_id (UUID), content (str),
             tags (List[str]), importance (float),
             image_url (str | None)
         """
@@ -120,14 +120,13 @@ class PostgresHandler:
         row = await pool.fetchrow(
             """
             INSERT INTO core.nodes
-                (id, chapter_id, content, type, tags, importance, image_url, created_at)
-            VALUES ($1, $2, $3, $4::core.node_type, $5, $6, $7, $8)
+                (id, chapter_id, content, tags, importance, image_url, created_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
             RETURNING *
             """,
             uuid.uuid4(),
             node_data["chapter_id"],
             node_data["content"],
-            node_data["type"],
             node_data.get("tags", []),
             node_data.get("importance", 0.0),
             node_data.get("image_url"),
