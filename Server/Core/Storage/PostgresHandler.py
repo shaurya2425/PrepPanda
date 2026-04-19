@@ -188,6 +188,35 @@ class PostgresHandler:
         )
         return [self._record_to_dict(r) for r in rows]
 
+    async def search_diagram_nodes(
+        self,
+        query: str,
+        chapter_id: uuid.UUID,
+        limit: int = 3,
+    ) -> List[Dict[str, Any]]:
+        """Keyword search restricted to diagram nodes (image_url IS NOT NULL).
+
+        Used by the retrieval chain to find relevant diagrams when not
+        enough surfaced through the main RRF ranking.
+        """
+        pool = self._pool_guard()
+        rows = await pool.fetch(
+            """
+            SELECT *,
+                   ts_rank_cd(to_tsvector('english', content), plainto_tsquery('english', $1)) AS rank
+            FROM core.nodes
+            WHERE chapter_id = $2
+              AND image_url IS NOT NULL
+              AND to_tsvector('english', content) @@ plainto_tsquery('english', $1)
+            ORDER BY rank DESC
+            LIMIT $3
+            """,
+            query,
+            chapter_id,
+            limit,
+        )
+        return [self._record_to_dict(r) for r in rows]
+
     # ------------------------------------------------------------------
     # User Progress
     # ------------------------------------------------------------------

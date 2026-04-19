@@ -1,60 +1,89 @@
--- PrepPanda core schema
--- Run this once against the appdb database to set up all required tables.
-
+-- ================================
+-- SCHEMAS
+-- ================================
 CREATE SCHEMA IF NOT EXISTS core;
-CREATE SCHEMA IF NOT EXISTS vector;
 
--- Enable pgvector extension (must be in public for operators like <=> to work)
+-- Enable pgvector
 CREATE EXTENSION IF NOT EXISTS vector;
 
--- Users
-CREATE TABLE IF NOT EXISTS core.users (
-    id          UUID PRIMARY KEY,
-    email       TEXT UNIQUE NOT NULL,
-    created_at  TIMESTAMPTZ NOT NULL
+-- ================================
+-- BOOKS
+-- ================================
+CREATE TABLE core.books (
+    book_id        UUID PRIMARY KEY,
+    title          TEXT NOT NULL,
+    grade          INT NOT NULL,         -- e.g. 6–12
+    subject        TEXT NOT NULL,        -- physics, biology, etc.
+    created_at     TIMESTAMPTZ NOT NULL
 );
 
--- Chapters
-CREATE TABLE IF NOT EXISTS core.chapters (
-    id          UUID PRIMARY KEY,
-    title       TEXT NOT NULL,
-    subject     TEXT NOT NULL,
-    pdf_url     TEXT NOT NULL,
-    created_at  TIMESTAMPTZ NOT NULL
+-- ================================
+-- CHAPTERS
+-- ================================
+CREATE TABLE core.chapters (
+    chapter_id     UUID PRIMARY KEY,
+    book_id        UUID NOT NULL REFERENCES core.books(book_id) ON DELETE CASCADE,
+    chapter_number INT NOT NULL,
+    title          TEXT NOT NULL,
+    created_at     TIMESTAMPTZ NOT NULL
 );
 
--- Nodes
-CREATE TABLE IF NOT EXISTS core.nodes (
-    id          UUID PRIMARY KEY,
-    chapter_id  UUID NOT NULL REFERENCES core.chapters(id) ON DELETE CASCADE,
-    content     TEXT NOT NULL,
-    tags        TEXT[] NOT NULL DEFAULT '{}',
-    importance  FLOAT NOT NULL DEFAULT 0.0,
-    image_url   TEXT,
-    created_at  TIMESTAMPTZ NOT NULL
+CREATE INDEX idx_chapters_book ON core.chapters(book_id);
+
+-- ================================
+-- CHUNKS (CORE RETRIEVAL UNIT)
+-- ================================
+CREATE TABLE core.chunks (
+    chunk_id        UUID PRIMARY KEY,
+    chapter_id      UUID NOT NULL REFERENCES core.chapters(chapter_id) ON DELETE CASCADE,
+
+    content         TEXT NOT NULL,
+    token_count     INT NOT NULL,
+    position_index  INT NOT NULL,    -- ordering within chapter
+
+    section_title   TEXT,            -- optional, improves retrieval
+
+    -- Hybrid retrieval support
+    tsv             tsvector,        -- for BM25 / keyword search
+    embedding       vector(768),     -- adjust based on model
+
+    created_at      TIMESTAMPTZ NOT NULL
 );
 
--- User progress
-CREATE TABLE IF NOT EXISTS core.user_progress (
-    user_id     UUID NOT NULL REFERENCES core.users(id) ON DELETE CASCADE,
-    node_id     UUID NOT NULL REFERENCES core.nodes(id) ON DELETE CASCADE,
-    accuracy    FLOAT NOT NULL DEFAULT 0.0,
-    attempts    INT NOT NULL DEFAULT 0,
-    PRIMARY KEY (user_id, node_id)
+-- Filtering + ordering
+CREATE INDEX idx_chunks_chapter ON core.chunks(chapter_id);
+CREATE INDEX idx_chunks_position ON core.chunks(chapter_id, position_index);
+
+-- Full-text search
+CREATE INDEX idx_chunks_tsv ON core.chunks USING GIN(tsv);
+
+-- Vector index (HNSW preferred)
+CREATE INDEX idx_chunks_embedding
+ON core.chunks USING hnsw (embedding vector_l2_ops);
+
+-- ================================
+-- IMAGES (NOT EMBEDDED)
+-- ================================
+CREATE TABLE core.images (
+    image_id        UUID PRIMARY KEY,
+    chapter_id      UUID NOT NULL REFERENCES core.chapters(chapter_id) ON DELETE CASCADE,
+
+    image_path      TEXT NOT NULL,   -- local path / S3 URL
+    caption         TEXT,            -- optional but useful
+
+    position_index  INT NOT NULL,    -- position in chapter
+
+    created_at      TIMESTAMPTZ NOT NULL
 );
 
--- Chat history
-CREATE TABLE IF NOT EXISTS core.chat_history (
-    id          UUID PRIMARY KEY,
-    user_id     UUID NOT NULL REFERENCES core.users(id) ON DELETE CASCADE,
-    chapter_id  UUID NOT NULL REFERENCES core.chapters(id) ON DELETE CASCADE,
-    messages    JSONB NOT NULL,
-    created_at  TIMESTAMPTZ NOT NULL
-);
+CREATE INDEX idx_images_chapter ON core.images(chapter_id);
+CREATE INDEX idx_images_position ON core.images(chapter_id, position_index);
 
--- Vector embeddings (pgvector)
-CREATE TABLE IF NOT EXISTS vector.embeddings (
-    node_id     UUID PRIMARY KEY REFERENCES core.nodes(id) ON DELETE CASCADE,
-    embedding   vector(3072),   -- gemini-embedding-2-preview outputs 3072 dims
-    created_at  TIMESTAMPTZ NOT NULL
+-- ================================
+-- LINKING (TEXT ↔ IMAGE)
+-- ================================
+CREATE TABLE core.chunk_image_links (
+    chunk_id UUID NOT NULL REFERENCES core.chunks(chunk_id) ON DELETE CASCADE,
+    image_id UUID NOT NULL REFERENCES core.images(image_id) ON DELETE CASCADE,
+    PRIMARY KEY (chunk_id, image_id)
 );

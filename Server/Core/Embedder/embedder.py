@@ -226,11 +226,18 @@ class Embedder:
         query: str,
         chapter_id: str,
         limit: int = 10,
-    ) -> List[Dict[str, Any]]:
+        diagram_limit: int = 3,
+    ) -> Dict[str, Any]:
         """Hybrid retrieve: vector similarity + keyword search merged via RRF.
 
-        Each result dict contains the full node record plus
-        ``similarity_score`` (from vector) and ``rrf_score`` (final rank).
+        Returns a dict with two keys:
+
+        * ``"nodes"`` – top text nodes (full records with ``similarity_score``
+          and ``rrf_score``).
+        * ``"diagrams"`` – diagram nodes relevant to the query.  Diagrams that
+          ranked inside the top results are always included; if fewer than
+          *diagram_limit* surfaced naturally, a targeted vector search for
+          diagram-only nodes fills the gap.
         """
         chap_uuid = uuid.UUID(chapter_id)
 
@@ -258,25 +265,55 @@ class Embedder:
             rrf_scores[nid] = rrf_scores.get(nid, 0.0) + 1.0 / (K + rank + 1)
 
         if not rrf_scores:
-            return []
+            return {"nodes": [], "diagrams": []}
 
         # ── Fetch full node records ─────────────────────────────────
-        # Sort by RRF score, take top-limit
-        sorted_ids = sorted(rrf_scores, key=rrf_scores.get, reverse=True)[:limit]
+        sorted_ids = sorted(rrf_scores, key=rrf_scores.get, reverse=True)[
+            : limit + diagram_limit
+        ]
         nodes = await self._pg.get_nodes_by_ids(sorted_ids)
 
-        # Build similarity score map for display
         vec_score_map = {r["node_id"]: r["similarity_score"] for r in vec_results}
 
-        enriched: List[Dict[str, Any]] = []
         for node in nodes:
             nid = node["id"]
             node["similarity_score"] = vec_score_map.get(nid, 0.0)
             node["rrf_score"] = rrf_scores.get(nid, 0.0)
-            enriched.append(node)
 
-        enriched.sort(key=lambda n: n["rrf_score"], reverse=True)
-        return enriched
+        # ── Split into text vs diagram nodes ────────────────────────
+        text_nodes: List[Dict[str, Any]] = []
+        diagram_nodes: List[Dict[str, Any]] = []
+
+        for node in nodes:
+            if node.get("image_url"):
+                diagram_nodes.append(node)
+            else:
+                text_nodes.append(node)
+
+        text_nodes.sort(key=lambda n: n["rrf_score"], reverse=True)
+        diagram_nodes.sort(key=lambda n: n["rrf_score"], reverse=True)
+
+        # ── Fill diagram slots if needed ────────────────────────────
+        # If fewer than diagram_limit diagrams surfaced via RRF, do a
+        # targeted vector search restricted to diagram nodes.
+        if len(diagram_nodes) < diagram_limit:
+            existing_ids = {n["id"] for n in diagram_nodes}
+            extra = await self._pg.search_diagram_nodes(
+                query, chap_uuid, limit=diagram_limit
+            )
+            for node in extra:
+                if node["id"] not in existing_ids:
+                    node["similarity_score"] = 0.0
+                    node["rrf_score"] = 0.0
+                    diagram_nodes.append(node)
+                    existing_ids.add(node["id"])
+                if len(diagram_nodes) >= diagram_limit:
+                    break
+
+        return {
+            "nodes": text_nodes[:limit],
+            "diagrams": diagram_nodes[:diagram_limit],
+        }
 
     # ──────────────────────────────────────────────────────────────────
     # 6. FILTERING / CRUD HELPERS

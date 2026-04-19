@@ -144,22 +144,21 @@ async def main():
         logger.info(f"Question: {QUESTION}")
 
         TOP_K = 12
-        nodes = await embedder.retrieve(QUESTION, chapter_id, limit=TOP_K)
+        results = await embedder.retrieve(QUESTION, chapter_id, limit=TOP_K)
+        nodes = results["nodes"]
+        diagrams = results["diagrams"]
 
-        # Filter out diagram-only placeholder nodes (no useful text)
-        nodes = [n for n in nodes if not (
-            n.get("content", "").strip().startswith("Diagram ")
-            and len(n.get("content", "").strip()) < 20
-        )]
-
-        if not nodes:
+        if not nodes and not diagrams:
             logger.warning("No relevant nodes found.")
             return
 
-        logger.info(f"Retrieved {len(nodes)} relevant nodes.")
+        logger.info(f"Retrieved {len(nodes)} text nodes + {len(diagrams)} diagrams.")
 
         # ── 3. Build context & prompt ───────────────────────────────
         context = build_context_block(nodes)
+        if diagrams:
+            diagram_block = build_context_block(diagrams)
+            context += "\n\n── RELATED DIAGRAMS ──\n" + diagram_block
         prompt = build_prompt(QUESTION, context)
 
         # ── 4. Ask Gemini ───────────────────────────────────────────
@@ -179,12 +178,17 @@ async def main():
         for i, node in enumerate(nodes, 1):
             rrf = node.get("rrf_score", 0)
             vec_s = node.get("similarity_score", 0)
-            img = node.get("image_url")
             snippet = (node.get("content") or "")[:120].replace("\n", " ")
-            line = f"  {i}. [rrf={rrf:.4f} vec={vec_s:.4f}] {snippet}..."
-            if img:
-                line += f"\n     📊 Image: {img}"
-            print(line)
+            print(f"  {i}. [rrf={rrf:.4f} vec={vec_s:.4f}] {snippet}...")
+        if diagrams:
+            print()
+            print("  DIAGRAMS")
+            print("  " + "-" * 40)
+            for i, node in enumerate(diagrams, 1):
+                caption = (node.get("content") or "")[:100].replace("\n", " ")
+                img = node.get("image_url", "")
+                print(f"  {i}. {caption}")
+                print(f"     📊 {img}")
         print()
 
     finally:
