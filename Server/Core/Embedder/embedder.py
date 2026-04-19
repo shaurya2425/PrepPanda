@@ -7,7 +7,7 @@ import re
 import uuid
 from typing import Any, Dict, List, Optional, Tuple
 
-from Core.Embedder.parser import StructuralNode, extract_pdf, split_into_chunks
+from Core.Embedder.parser import FigureCaption, StructuralNode, extract_pdf, split_into_chunks
 from Core.Storage.BucketHandler import BucketHandler
 from Core.Storage.PostgresHandler import PostgresHandler
 from Core.Storage.VectorHandler import VectorHandler
@@ -68,8 +68,8 @@ class Embedder:
         """
         chap_uuid = uuid.UUID(chapter_id)
 
-        raw_text, images = extract_pdf(pdf_path)
-        structural_nodes = split_into_chunks(raw_text)
+        raw_text, matched_images = extract_pdf(pdf_path)
+        structural_nodes, _ = split_into_chunks(raw_text)
 
         text_node_ids: List[str] = []
         image_node_ids: List[str] = []
@@ -86,26 +86,31 @@ class Embedder:
                 logger.exception("Skipping bad text chunk (len=%d)", len(snode.content))
 
         # ── image / diagram nodes ───────────────────────────────────
-        for idx, img_bytes in enumerate(images):
+        # Only images matched to NCERT figure captions (per-page) are
+        # kept.  Portraits, decorative elements, etc. were already
+        # dropped during extraction.
+        for img_bytes, caption in matched_images:
             try:
-                image_url = self._upload_image(img_bytes, chapter_id, idx)
+                image_url = self._upload_image(
+                    img_bytes, chapter_id, caption.figure_id, caption.caption
+                )
                 node_id = await self.create_node(
-                    content=f"Diagram {idx + 1}",
+                    content=caption.full_caption(),
                     chapter_id=str(chap_uuid),
                     image_url=image_url,
                 )
                 image_node_ids.append(node_id)
                 logger.info(
-                    "Stored image node #%d (%d bytes) → %s",
-                    idx, len(img_bytes), image_url,
+                    "Stored image node Fig %s (%d bytes) → %s",
+                    caption.figure_id, len(img_bytes), image_url,
                 )
             except Exception:
-                logger.exception("Skipping image #%d", idx)
+                logger.exception("Skipping image Fig %s", caption.figure_id)
 
-        # ── bulk embed TEXT nodes only ──────────────────────────────
-        # Diagram nodes have placeholder content ("Diagram N") which has
-        # no semantic value — skip embedding them.
-        await self.embed_nodes(text_node_ids)
+        # ── bulk embed ALL nodes ────────────────────────────────────
+        # Diagram nodes now carry real NCERT captions with semantic
+        # value, so they are worth embedding for retrieval.
+        await self.embed_nodes(text_node_ids + image_node_ids)
 
         return text_node_ids + image_node_ids
 
@@ -298,10 +303,21 @@ class Embedder:
         self,
         img_bytes: bytes,
         chapter_id: str,
-        index: int,
+        figure_id: str,
+        caption: str,
     ) -> str:
-        """Upload diagram bytes to the bucket and return the public URL."""
-        filename = f"chapters/{chapter_id}/diagrams/{index}.png"
+        """Upload diagram bytes to the bucket and return the public URL.
+
+        File is named from the figure caption for readability, e.g.
+        ``{chapter_id}/fig_1.1_ls_of_a_flower.png``.
+        """
+        slug = (
+            re.sub(r"[^a-z0-9]+", "_", caption.lower()).strip("_")[:60]
+            if caption
+            else ""
+        )
+        name = f"fig_{figure_id}_{slug}" if slug else f"fig_{figure_id}"
+        filename = f"{chapter_id}/{name}.png"
         return self._bucket.upload_bytes(img_bytes, filename, "image/png")
 
     def _upload_pdf(

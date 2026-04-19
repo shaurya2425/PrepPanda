@@ -66,6 +66,12 @@ _RE_QUESTION = re.compile(r"^\s*(exercises?|questions?|problems?|intext\s+questi
 # Bullet / numbered list items
 _RE_LIST_ITEM = re.compile(r"^\s*(?:[•●▪▸\-\*]|\(?[a-zA-Z0-9ivx]+[).])\s+")
 
+# NCERT figure / diagram captions — "Figure 1.1 Description" / "Fig. 1.1 ..."
+_RE_FIGURE_CAPTION = re.compile(
+    r"^(?:figure\s+|fig\.?\s*)(\d+(?:\.\d+)*)\s*[:\-\u2013\u2014.]?\s*(.*)",
+    re.IGNORECASE,
+)
+
 
 # ──────────────────────────────────────────────────────────────────────
 # Data structures
@@ -94,6 +100,29 @@ class StructuralNode:
         return self.content
 
 
+@dataclass
+class FigureCaption:
+    """A detected NCERT-style figure/diagram caption.
+
+    Extracted from lines like ``Figure 1.1 A diagrammatic representation
+    of L.S. of a flower``.
+    """
+
+    figure_id: str  # e.g. "1.1", "2.3"
+    caption: str  # descriptive text after the figure number
+    section_path: List[str] = field(default_factory=list)
+
+    def full_caption(self) -> str:
+        """Return formatted caption with structural context for embedding."""
+        prefix_parts = [p for p in self.section_path if p]
+        label = f"Figure {self.figure_id}"
+        if self.caption:
+            label += f": {self.caption}"
+        if prefix_parts:
+            return f"[{' > '.join(prefix_parts)}]\n{label}"
+        return label
+
+
 # ──────────────────────────────────────────────────────────────────────
 # PDF Extraction — robust image handling
 # ──────────────────────────────────────────────────────────────────────
@@ -118,27 +147,49 @@ def _content_hash(data: bytes) -> str:
     return hashlib.md5(data).hexdigest()
 
 
-def extract_pdf(pdf_path: str) -> Tuple[str, List[bytes]]:
-    """Extract plain text and meaningful raster images from a PDF.
+def extract_pdf(pdf_path: str) -> Tuple[str, List[Tuple[bytes, FigureCaption]]]:
+    """Extract plain text and captioned diagram images from a PDF.
 
-    Returns ``(full_text, [image_bytes_png, ...])``.
+    Returns ``(full_text, [(image_bytes_png, figure_caption), ...])``.
+
+    **Per-page matching strategy:** On each page, NCERT figure captions
+    (``Figure 1.1 ...``, ``Fig. 1.1 ...``) are detected in the page text.
+    Extracted images are matched to captions on the *same page* by order
+    of appearance.  Images on pages with no figure caption are dropped —
+    these are typically portraits, decorative borders, or watermarks.
 
     Image extraction renders each image *from the page* rather than pulling
     raw xref data.  This guarantees correct colourspace, SMask compositing,
-    and alpha handling — fixing the "black screen" bug.
+    and alpha handling.
     """
     doc = fitz.open(pdf_path)
     text_parts: List[str] = []
-    images: List[bytes] = []
+    matched_images: List[Tuple[bytes, FigureCaption]] = []
     seen_hashes: Dict[str, bool] = {}
 
     for page in doc:
-        text_parts.append(page.get_text("text"))
+        page_text = page.get_text("text")
+        text_parts.append(page_text)
 
+        # ── Detect figure captions on this page ─────────────────────
+        page_captions: List[FigureCaption] = []
+        for line in page_text.split("\n"):
+            stripped = line.strip()
+            fig_match = _RE_FIGURE_CAPTION.match(stripped)
+            if fig_match:
+                fig_id = fig_match.group(1)
+                fig_text = fig_match.group(2).strip()
+                if fig_text.endswith("."):
+                    fig_text = fig_text[:-1].strip()
+                page_captions.append(
+                    FigureCaption(figure_id=fig_id, caption=fig_text)
+                )
+
+        # ── Extract images from this page ───────────────────────────
+        page_images: List[bytes] = []
         for img_info in page.get_images(full=True):
             xref = img_info[0]
             try:
-                # Get the rectangle(s) where this image is placed on the page
                 rects = page.get_image_rects(xref)
                 if not rects:
                     continue
@@ -154,7 +205,6 @@ def extract_pdf(pdf_path: str) -> Tuple[str, List[bytes]]:
                     continue
 
                 # Render from the page (respects SMask, colorspace, transforms)
-                # Use a 2x scale matrix for decent quality
                 mat = fitz.Matrix(2, 2)
                 pix = page.get_pixmap(clip=rect, matrix=mat, alpha=False)
 
@@ -173,16 +223,36 @@ def extract_pdf(pdf_path: str) -> Tuple[str, List[bytes]]:
                     continue
                 seen_hashes[h] = True
 
-                images.append(png_bytes)
-                logger.debug(
-                    "Extracted image xref=%d page=%d size=%dx%d (%d bytes)",
-                    xref, page.number, pix.width, pix.height, len(png_bytes),
-                )
+                page_images.append(png_bytes)
             except Exception:
                 logger.debug("Could not extract image xref=%d", xref)
 
+        # ── Match images ↔ captions on this page ───────────────────
+        if page_images and not page_captions:
+            logger.debug(
+                "Page %d: dropping %d images — no figure captions "
+                "(likely portraits / decorative)",
+                page.number,
+                len(page_images),
+            )
+        elif page_captions and not page_images:
+            logger.debug(
+                "Page %d: %d figure captions but no extractable images",
+                page.number,
+                len(page_captions),
+            )
+
+        matched_count = min(len(page_images), len(page_captions))
+        for i in range(matched_count):
+            matched_images.append((page_images[i], page_captions[i]))
+            logger.debug(
+                "Page %d: matched image → Fig %s",
+                page.number,
+                page_captions[i].figure_id,
+            )
+
     doc.close()
-    return "\n".join(text_parts), images
+    return "\n".join(text_parts), matched_images
 
 
 # ──────────────────────────────────────────────────────────────────────
@@ -209,8 +279,8 @@ def _is_heading(line: str) -> bool:
 # Structure-Aware Chunking
 # ──────────────────────────────────────────────────────────────────────
 
-def split_into_chunks(text: str) -> List[StructuralNode]:
-    """Parse raw text into ``StructuralNode`` objects using structural cues.
+def split_into_chunks(text: str) -> Tuple[List[StructuralNode], List[FigureCaption]]:
+    """Parse raw text into ``StructuralNode`` and ``FigureCaption`` objects.
 
     Strategy
     --------
@@ -218,13 +288,17 @@ def split_into_chunks(text: str) -> List[StructuralNode]:
        hierarchy) like a stack.
     2. When a heading is detected, flush the current chunk and update the
        section context.
-    3. Within a section, sentences are grouped into chunks respecting
+    3. NCERT figure captions (``Figure 1.1 ...``, ``Fig. 1.1 ...``) are
+       detected, extracted from the text flow, and returned separately
+       so they can be paired with extracted images.
+    4. Within a section, sentences are grouped into chunks respecting
        ``MAX_CHUNK_WORDS`` using spaCy for proper sentence boundaries.
-    4. Drops chunks shorter than ``MIN_CHUNK_CHARS``.
+    5. Drops chunks shorter than ``MIN_CHUNK_CHARS``.
     """
     nlp = _get_nlp()
     lines = text.split("\n")
     nodes: List[StructuralNode] = []
+    figure_captions: List[FigureCaption] = []
 
     # Running state
     section_stack: List[str] = []
@@ -299,6 +373,27 @@ def split_into_chunks(text: str) -> List[StructuralNode]:
                 buffer.append("")
             continue
 
+        # ── Check for NCERT figure caption BEFORE heading check ─────
+        # Captions like "Figure 1.1 L.S. of a flower" could otherwise
+        # be misclassified as title-case headings.
+        fig_match = _RE_FIGURE_CAPTION.match(stripped)
+        if fig_match:
+            _flush()
+            fig_id = fig_match.group(1)
+            fig_text = fig_match.group(2).strip()
+            # Strip trailing period from caption text
+            if fig_text.endswith("."):
+                fig_text = fig_text[:-1].strip()
+            figure_captions.append(
+                FigureCaption(
+                    figure_id=fig_id,
+                    caption=fig_text,
+                    section_path=list(section_stack),
+                )
+            )
+            logger.debug("Detected figure caption: Fig %s – %s", fig_id, fig_text)
+            continue
+
         # Check for heading
         if _is_heading(stripped):
             _flush()
@@ -322,4 +417,4 @@ def split_into_chunks(text: str) -> List[StructuralNode]:
     # Final flush
     _flush()
 
-    return nodes
+    return nodes, figure_captions
