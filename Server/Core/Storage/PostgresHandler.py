@@ -46,139 +46,162 @@ class PostgresHandler:
     def _record_to_dict(record: asyncpg.Record) -> Dict[str, Any]:
         return dict(record)
 
-    # ------------------------------------------------------------------
-    # Users
-    # ------------------------------------------------------------------
+    @staticmethod
+    def _embedding_to_pg(embedding: List[float]) -> str:
+        return "[" + ",".join(str(v) for v in embedding) + "]"
 
-    async def create_user(self, email: str) -> Dict[str, Any]:
+    # ==========================================================
+    # BOOKS
+    # ==========================================================
+
+    async def create_book(self, title: str, grade: int, subject: str) -> Dict[str, Any]:
         pool = self._pool_guard()
         row = await pool.fetchrow(
             """
-            INSERT INTO core.users (id, email, created_at)
-            VALUES ($1, $2, $3)
-            RETURNING *
-            """,
-            uuid.uuid4(),
-            email,
-            datetime.utcnow(),
-        )
-        return self._record_to_dict(row)
-
-    async def get_user_by_id(self, user_id: uuid.UUID) -> Optional[Dict[str, Any]]:
-        pool = self._pool_guard()
-        row = await pool.fetchrow(
-            "SELECT * FROM core.users WHERE id = $1",
-            user_id,
-        )
-        return self._record_to_dict(row) if row else None
-
-    # ------------------------------------------------------------------
-    # Chapters
-    # ------------------------------------------------------------------
-
-    async def create_chapter(
-        self,
-        title: str,
-        subject: str,
-        pdf_url: str,
-    ) -> Dict[str, Any]:
-        pool = self._pool_guard()
-        row = await pool.fetchrow(
-            """
-            INSERT INTO core.chapters (id, title, subject, pdf_url, created_at)
+            INSERT INTO core.books (book_id, title, grade, subject, created_at)
             VALUES ($1, $2, $3, $4, $5)
             RETURNING *
             """,
             uuid.uuid4(),
             title,
+            grade,
             subject,
-            pdf_url,
             datetime.utcnow(),
         )
         return self._record_to_dict(row)
 
-    async def get_chapter(self, chapter_id: uuid.UUID) -> Optional[Dict[str, Any]]:
-        pool = self._pool_guard()
-        row = await pool.fetchrow(
-            "SELECT * FROM core.chapters WHERE id = $1",
-            chapter_id,
-        )
-        return self._record_to_dict(row) if row else None
+    # ==========================================================
+    # CHAPTERS
+    # ==========================================================
 
-    # ------------------------------------------------------------------
-    # Nodes
-    # ------------------------------------------------------------------
-
-    async def create_node(self, node_data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        node_data keys:
-            chapter_id (UUID), content (str),
-            tags (List[str]), importance (float),
-            image_url (str | None)
-        """
+    async def create_chapter(
+        self,
+        book_id: uuid.UUID,
+        chapter_number: int,
+        title: str,
+    ) -> Dict[str, Any]:
         pool = self._pool_guard()
         row = await pool.fetchrow(
             """
-            INSERT INTO core.nodes
-                (id, chapter_id, content, tags, importance, image_url, created_at)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            INSERT INTO core.chapters (chapter_id, book_id, chapter_number, title, created_at)
+            VALUES ($1, $2, $3, $4, $5)
             RETURNING *
             """,
             uuid.uuid4(),
-            node_data["chapter_id"],
-            node_data["content"],
-            node_data.get("tags", []),
-            node_data.get("importance", 0.0),
-            node_data.get("image_url"),
+            book_id,
+            chapter_number,
+            title,
             datetime.utcnow(),
         )
         return self._record_to_dict(row)
 
-    async def get_node(self, node_id: uuid.UUID) -> Optional[Dict[str, Any]]:
+    # ==========================================================
+    # CHUNKS (CORE)
+    # ==========================================================
+
+    async def create_chunk(
+        self,
+        chapter_id: uuid.UUID,
+        content: str,
+        token_count: int,
+        position_index: int,
+        embedding: List[float],
+        section_title: Optional[str] = None,
+        pyq_score: float = 0.0,
+    ) -> Dict[str, Any]:
         pool = self._pool_guard()
+
         row = await pool.fetchrow(
-            "SELECT * FROM core.nodes WHERE id = $1",
-            node_id,
-        )
-        return self._record_to_dict(row) if row else None
-
-    async def get_nodes_by_chapter(self, chapter_id: uuid.UUID) -> List[Dict[str, Any]]:
-        pool = self._pool_guard()
-        rows = await pool.fetch(
-            "SELECT * FROM core.nodes WHERE chapter_id = $1 ORDER BY created_at",
+            """
+            INSERT INTO core.chunks
+            (chunk_id, chapter_id, content, token_count, position_index,
+             section_title, tsv, embedding, created_at, pyq_score)
+            VALUES (
+                $1, $2, $3, $4, $5,
+                $6,
+                to_tsvector('english', $3),
+                $7::vector,
+                $8, $9
+            )
+            RETURNING *
+            """,
+            uuid.uuid4(),
             chapter_id,
+            content,
+            token_count,
+            position_index,
+            section_title,
+            self._embedding_to_pg(embedding),
+            datetime.utcnow(),
+            pyq_score,
         )
-        return [self._record_to_dict(r) for r in rows]
 
-    async def get_nodes_by_ids(self, node_ids: List[uuid.UUID]) -> List[Dict[str, Any]]:
-        if not node_ids:
+        return self._record_to_dict(row)
+
+    async def get_chunks_by_ids(
+        self, chunk_ids: List[uuid.UUID]
+    ) -> List[Dict[str, Any]]:
+        if not chunk_ids:
             return []
+
         pool = self._pool_guard()
         rows = await pool.fetch(
-            "SELECT * FROM core.nodes WHERE id = ANY($1::uuid[])",
-            node_ids,
+            """
+            SELECT *
+            FROM core.chunks
+            WHERE chunk_id = ANY($1::uuid[])
+            """,
+            chunk_ids,
         )
         return [self._record_to_dict(r) for r in rows]
 
-    async def keyword_search_nodes(
+    # ==========================================================
+    # SEMANTIC SEARCH
+    # ==========================================================
+
+    async def search_chunks_semantic(
+        self,
+        query_embedding: List[float],
+        chapter_id: uuid.UUID,
+        limit: int = 10,
+    ) -> List[Dict[str, Any]]:
+        pool = self._pool_guard()
+
+        rows = await pool.fetch(
+            """
+            SELECT *,
+                   1 - (embedding <=> $1::vector) AS similarity_score
+            FROM core.chunks
+            WHERE chapter_id = $2
+            ORDER BY embedding <=> $1::vector
+            LIMIT $3
+            """,
+            self._embedding_to_pg(query_embedding),
+            chapter_id,
+            limit,
+        )
+
+        return [self._record_to_dict(r) for r in rows]
+
+    # ==========================================================
+    # KEYWORD SEARCH (BM25-ish)
+    # ==========================================================
+
+    async def search_chunks_keyword(
         self,
         query: str,
         chapter_id: uuid.UUID,
         limit: int = 10,
     ) -> List[Dict[str, Any]]:
-        """Full-text keyword search over node content using PostgreSQL ts_vector.
-
-        Returns nodes ranked by relevance, filtered to a chapter.
-        """
         pool = self._pool_guard()
-        # plainto_tsquery handles natural-language queries safely
+
         rows = await pool.fetch(
             """
             SELECT *,
-                   ts_rank_cd(to_tsvector('english', content), plainto_tsquery('english', $1)) AS rank
-            FROM core.nodes
+                   ts_rank_cd(tsv, plainto_tsquery('english', $1)) AS rank
+            FROM core.chunks
             WHERE chapter_id = $2
-              AND to_tsvector('english', content) @@ plainto_tsquery('english', $1)
+              AND tsv @@ plainto_tsquery('english', $1)
             ORDER BY rank DESC
             LIMIT $3
             """,
@@ -186,123 +209,168 @@ class PostgresHandler:
             chapter_id,
             limit,
         )
+
         return [self._record_to_dict(r) for r in rows]
 
-    async def search_diagram_nodes(
+    # ==========================================================
+    # NEIGHBOR EXPANSION
+    # ==========================================================
+
+    async def get_neighbor_chunks(
         self,
-        query: str,
         chapter_id: uuid.UUID,
-        limit: int = 3,
-    ) -> List[Dict[str, Any]]:
-        """Keyword search restricted to diagram nodes (image_url IS NOT NULL).
-
-        Used by the retrieval chain to find relevant diagrams when not
-        enough surfaced through the main RRF ranking.
-        """
-        pool = self._pool_guard()
-        rows = await pool.fetch(
-            """
-            SELECT *,
-                   ts_rank_cd(to_tsvector('english', content), plainto_tsquery('english', $1)) AS rank
-            FROM core.nodes
-            WHERE chapter_id = $2
-              AND image_url IS NOT NULL
-              AND to_tsvector('english', content) @@ plainto_tsquery('english', $1)
-            ORDER BY rank DESC
-            LIMIT $3
-            """,
-            query,
-            chapter_id,
-            limit,
-        )
-        return [self._record_to_dict(r) for r in rows]
-
-    # ------------------------------------------------------------------
-    # User Progress
-    # ------------------------------------------------------------------
-
-    async def update_progress(
-        self,
-        user_id: uuid.UUID,
-        node_id: uuid.UUID,
-        accuracy_delta: float,
-    ) -> Dict[str, Any]:
-        pool = self._pool_guard()
-        row = await pool.fetchrow(
-            """
-            INSERT INTO core.user_progress (user_id, node_id, accuracy, attempts)
-            VALUES ($1, $2, $3, 1)
-            ON CONFLICT (user_id, node_id) DO UPDATE
-                SET accuracy  = (core.user_progress.accuracy * core.user_progress.attempts + $3)
-                                 / (core.user_progress.attempts + 1),
-                    attempts   = core.user_progress.attempts + 1
-            RETURNING *
-            """,
-            user_id,
-            node_id,
-            accuracy_delta,
-        )
-        return self._record_to_dict(row)
-
-    async def get_user_progress(
-        self,
-        user_id: uuid.UUID,
-        chapter_id: uuid.UUID,
+        positions: List[int],
     ) -> List[Dict[str, Any]]:
         pool = self._pool_guard()
+
         rows = await pool.fetch(
             """
-            SELECT up.*
-            FROM core.user_progress up
-            JOIN core.nodes n ON n.id = up.node_id
-            WHERE up.user_id = $1
-              AND n.chapter_id = $2
+            SELECT *
+            FROM core.chunks
+            WHERE chapter_id = $1
+              AND position_index = ANY($2::int[])
             """,
-            user_id,
             chapter_id,
+            positions,
         )
+
         return [self._record_to_dict(r) for r in rows]
 
-    # ------------------------------------------------------------------
-    # Chat History
-    # ------------------------------------------------------------------
+    # ==========================================================
+    # IMAGES
+    # ==========================================================
 
-    async def save_chat(
+    async def create_image(
         self,
-        user_id: uuid.UUID,
         chapter_id: uuid.UUID,
-        messages: List[Dict[str, Any]],
+        image_path: str,
+        caption: Optional[str],
+        position_index: int,
     ) -> Dict[str, Any]:
-        import json
-
         pool = self._pool_guard()
+
         row = await pool.fetchrow(
             """
-            INSERT INTO core.chat_history (id, user_id, chapter_id, messages, created_at)
-            VALUES ($1, $2, $3, $4::jsonb, $5)
+            INSERT INTO core.images
+            (image_id, chapter_id, image_path, caption, position_index, created_at)
+            VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING *
             """,
             uuid.uuid4(),
-            user_id,
             chapter_id,
-            json.dumps(messages),
+            image_path,
+            caption,
+            position_index,
+            datetime.utcnow(),
+        )
+
+        return self._record_to_dict(row)
+
+    async def link_chunk_image(
+        self,
+        chunk_id: uuid.UUID,
+        image_id: uuid.UUID,
+    ) -> None:
+        pool = self._pool_guard()
+
+        await pool.execute(
+            """
+            INSERT INTO core.chunk_image_links (chunk_id, image_id)
+            VALUES ($1, $2)
+            ON CONFLICT DO NOTHING
+            """,
+            chunk_id,
+            image_id,
+        )
+
+    async def get_images_for_chunks(
+        self,
+        chunk_ids: List[uuid.UUID],
+    ) -> List[Dict[str, Any]]:
+        if not chunk_ids:
+            return []
+
+        pool = self._pool_guard()
+
+        rows = await pool.fetch(
+            """
+            SELECT i.*, cil.chunk_id
+            FROM core.chunk_image_links cil
+            JOIN core.images i ON i.image_id = cil.image_id
+            WHERE cil.chunk_id = ANY($1::uuid[])
+            """,
+            chunk_ids,
+        )
+
+        return [self._record_to_dict(r) for r in rows]
+
+    # ==========================================================
+    # PYQs
+    # ==========================================================
+
+    async def create_pyq(
+        self,
+        chapter_id: uuid.UUID,
+        question: str,
+        answer: Optional[str] = None,
+        year: Optional[int] = None,
+        exam: Optional[str] = None,
+        marks: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        pool = self._pool_guard()
+        row = await pool.fetchrow(
+            """
+            INSERT INTO core.pyqs (
+                pyq_id, chapter_id, question, answer, year, exam, marks, created_at
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            RETURNING *
+            """,
+            uuid.uuid4(),
+            chapter_id,
+            question,
+            answer,
+            year,
+            exam,
+            marks,
             datetime.utcnow(),
         )
         return self._record_to_dict(row)
 
-    async def get_chat_history(
+    async def link_pyq_chunk(
         self,
-        user_id: uuid.UUID,
-        chapter_id: uuid.UUID,
+        pyq_id: uuid.UUID,
+        chunk_id: uuid.UUID,
+        relevance: float = 1.0,
+    ) -> None:
+        pool = self._pool_guard()
+        await pool.execute(
+            """
+            INSERT INTO core.pyq_chunk_map (pyq_id, chunk_id, relevance)
+            VALUES ($1, $2, $3)
+            ON CONFLICT DO NOTHING
+            """,
+            pyq_id,
+            chunk_id,
+            relevance,
+        )
+
+    async def get_pyqs_for_chunks(
+        self,
+        chunk_ids: List[uuid.UUID],
     ) -> List[Dict[str, Any]]:
+        if not chunk_ids:
+            return []
+
         pool = self._pool_guard()
         rows = await pool.fetch(
             """
-            SELECT * FROM core.chat_history
-            WHERE user_id = $1 AND chapter_id = $2
-            ORDER BY created_at
+            SELECT p.*, pcm.chunk_id, pcm.relevance
+            FROM core.pyq_chunk_map pcm
+            JOIN core.pyqs p ON p.pyq_id = pcm.pyq_id
+            WHERE pcm.chunk_id = ANY($1::uuid[])
             """,
-            user_id,
-            chapter_id,
+            chunk_ids,
         )
+
         return [self._record_to_dict(r) for r in rows]
