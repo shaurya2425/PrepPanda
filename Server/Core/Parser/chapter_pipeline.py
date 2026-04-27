@@ -32,6 +32,7 @@ from typing import Any, Dict, List, Optional
 
 from Core.Parser.NodeParser import parse_pdf_text, TextChunk, ImageRef
 from Core.Parser.VisualParser import parse_pdf_visual, ImageBlock
+from Core.Parser.embedder import ChunkEmbedder
 from Core.Storage.BucketHandler import BucketHandler
 from Core.Storage.PostgresHandler import PostgresHandler
 
@@ -53,6 +54,7 @@ class IngestResult:
     chunk_count: int = 0
     image_count: int = 0
     link_count: int = 0
+    embedded_count: int = 0
     # Detailed records for downstream use (e.g. embedding pass)
     chunk_records: List[Dict[str, Any]] = field(default_factory=list)
     image_records: Dict[str, Dict[str, Any]] = field(default_factory=dict)
@@ -91,10 +93,12 @@ class ChapterPipeline:
         self,
         pg: PostgresHandler,
         bucket: BucketHandler,
+        embedder: Optional[ChunkEmbedder] = None,
         embedding_dim: int = _EMBED_DIM,
     ) -> None:
         self._pg = pg
         self._bucket = bucket
+        self._embedder = embedder
         self._zero_vec = [0.0] * embedding_dim
 
     # ─────────────────────────────────────────────────────────────────
@@ -170,18 +174,28 @@ class ChapterPipeline:
             result.chunk_records, result.image_records,
         )
 
-        # ── 7. Summary ─────────────────────────────────────────────
+        # ── 7. Embed chunks ─────────────────────────────────────────
+        if self._embedder is not None:
+            result.embedded_count = await self._embedder.embed_chunks(
+                self._pg, result.chunk_records,
+            )
+        else:
+            logger.info("No embedder provided — chunks stored with zero vectors")
+
+        # ── 8. Summary ─────────────────────────────────────────────
         logger.info(
             "\n"
             "═══════════════════════════════════════\n"
             "  Chapter ingestion complete\n"
-            "  Chapter:  %s\n"
-            "  Chunks:   %d\n"
-            "  Images:   %d\n"
-            "  Links:    %d\n"
+            "  Chapter:    %s\n"
+            "  Chunks:     %d\n"
+            "  Embedded:   %d\n"
+            "  Images:     %d\n"
+            "  Links:      %d\n"
             "═══════════════════════════════════════",
             chapter_title,
             result.chunk_count,
+            result.embedded_count,
             result.image_count,
             result.link_count,
         )

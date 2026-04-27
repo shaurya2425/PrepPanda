@@ -155,6 +155,23 @@ class PostgresHandler:
         )
         return [self._record_to_dict(r) for r in rows]
 
+    async def update_chunk_embedding(
+        self,
+        chunk_id: uuid.UUID,
+        embedding: List[float],
+    ) -> None:
+        """Update the embedding vector for an existing chunk."""
+        pool = self._pool_guard()
+        await pool.execute(
+            """
+            UPDATE core.chunks
+            SET embedding = $2::vector
+            WHERE chunk_id = $1
+            """,
+            chunk_id,
+            self._embedding_to_pg(embedding),
+        )
+
     # ==========================================================
     # SEMANTIC SEARCH
     # ==========================================================
