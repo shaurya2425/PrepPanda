@@ -45,12 +45,12 @@ logger = logging.getLogger(__name__)
 # ─────────────────────────────────────────────────────────────────────
 
 # Maximum vertical pixel gap to consider a text block "near" an image
-CAPTION_VERTICAL_GAP = 40      # px — caption immediately below image
-CONTEXT_VERTICAL_GAP = 120     # px — explanatory paragraph above / below
-QUESTION_VERTICAL_GAP = 200    # px — questions referencing the image
+CAPTION_VERTICAL_GAP = 120     # pt — caption near image (NCERT has large spacing)
+CONTEXT_VERTICAL_GAP = 200     # pt — explanatory paragraph above / below
+QUESTION_VERTICAL_GAP = 300    # pt — questions referencing the image
 
 # Horizontal overlap threshold — fraction of width that must overlap
-HORIZONTAL_OVERLAP_THRESHOLD = 0.3
+HORIZONTAL_OVERLAP_THRESHOLD = 0.15
 
 # Side-by-side grouping — Y-range overlap fraction for image grouping
 GROUP_Y_OVERLAP_THRESHOLD = 0.5
@@ -160,11 +160,10 @@ class ImageBlock:
     image_bytes: bytes          # PNG data (empty until rendering)
     bbox: BBox
     page: int
+    xref: int = 0               # PDF xref for raw image extraction
     figure_id: Optional[str] = None   # e.g. "1.1"
     caption: Optional[str] = None
     content_hash: str = ""
-    # Original rect for deferred rendering (crop before render)
-    source_rect: Optional[fitz.Rect] = field(default=None, repr=False)
 
 
 @dataclass
@@ -242,13 +241,26 @@ def _is_blank_pixmap(pix: fitz.Pixmap) -> bool:
     return True
 
 
+# Maximum length for a text block to be considered a caption.
+# Real NCERT captions are 1-4 lines.  Longer blocks that happen to
+# start with "Figure X.Y" are body text referencing a figure.
+_MAX_CAPTION_CHARS = 300
+_MAX_CAPTION_LINES = 5
+
+
 def _classify_text(text: str) -> BlockRole:
     """Quick heuristic role for a text block."""
     stripped = text.strip()
     if not stripped:
         return BlockRole.BODY
 
-    if _RE_FIGURE_CAPTION.match(stripped):
+    # Only classify as CAPTION if the block is short enough to be a
+    # standalone caption — NOT a body paragraph referencing a figure.
+    if (
+        _RE_FIGURE_CAPTION.match(stripped)
+        and len(stripped) <= _MAX_CAPTION_CHARS
+        and stripped.count("\n") < _MAX_CAPTION_LINES
+    ):
         return BlockRole.CAPTION
 
     word_count = len(stripped.split())
@@ -289,7 +301,7 @@ def extract_page_elements(
     """Walk every page and extract positioned text blocks & images."""
     all_texts: List[TextBlock] = []
     all_images: List[ImageBlock] = []
-    seen_hashes: Dict[str, bool] = {}
+    seen_xrefs: Dict[int, bool] = {}
 
     for page in doc:
         page_num = page.number
@@ -322,9 +334,13 @@ def extract_page_elements(
                 TextBlock(text=text, bbox=bbox, page=page_num, role=role)
             )
 
-        # ── Images (collect rects only — rendering deferred) ────────
+        # ── Images (collect xrefs + rects — rendering deferred) ─────
         for img_info in page.get_images(full=True):
             xref = img_info[0]
+            # Deduplicate by xref — same embedded image reused across
+            # pages should only be captured once.
+            if xref in seen_xrefs:
+                continue
             try:
                 rects = page.get_image_rects(xref)
                 if not rects:
@@ -336,12 +352,13 @@ def extract_page_elements(
                 if rect.width * rect.height < MIN_IMAGE_AREA:
                     continue
 
+                seen_xrefs[xref] = True
                 all_images.append(
                     ImageBlock(
-                        image_bytes=b"",  # rendered later after crop
+                        image_bytes=b"",  # rendered later via xref
                         bbox=BBox.from_fitz(rect),
                         page=page_num,
-                        source_rect=rect,
+                        xref=xref,
                     )
                 )
             except Exception:
@@ -386,92 +403,146 @@ def associate_images(
     images: List[ImageBlock],
     doc: fitz.Document,
 ) -> List[ImageBlock]:
-    """Attach caption, figure_id to each image, then render.
+    """Caption-driven image association and rendering.
 
-    Images are cropped to end at the caption's top edge so that body
-    text below the caption is never included in the rendered PNG.
-    Uncaptioned images (decorative elements) are dropped entirely.
+    Instead of searching image→caption (which lets decorative banners
+    steal real captions), we flip the direction:
 
-    Mutates ``ImageBlock`` objects in-place and returns the filtered list.
+    **For each caption → find the nearest image ABOVE it.**
+
+    This is reliable because in NCERT textbooks the figure is almost
+    always directly above its caption line.  Images that no caption
+    points to are dropped as decorative.
     """
-    caption_blocks: Dict[int, TextBlock] = {}  # img index → caption block
-
-    for idx, img in enumerate(images):
-        # 1. Caption — closest caption-role block below image
-        caption_candidates = _find_nearest_text(
-            img, texts, role_filter=BlockRole.CAPTION, max_gap=CAPTION_VERTICAL_GAP,
-        )
-        # Also check blocks immediately below even if not pre-classified
-        if not caption_candidates:
-            below_blocks = [
-                tb for tb in texts
-                if tb.page == img.page
-                and img.bbox.horizontal_overlap(tb.bbox) >= HORIZONTAL_OVERLAP_THRESHOLD
-                and 0 < img.bbox.vertical_distance(tb.bbox) <= CAPTION_VERTICAL_GAP
-            ]
-            below_blocks.sort(key=lambda tb: img.bbox.vertical_distance(tb.bbox))
-            for tb in below_blocks:
-                fig_id, cap = _parse_caption(tb.text)
+    # Collect all caption text blocks (short blocks starting with Figure/Fig.)
+    all_captions: List[TextBlock] = []
+    for tb in texts:
+        if tb.role == BlockRole.CAPTION:
+            fig_id, _ = _parse_caption(tb.text)
+            if fig_id:
+                all_captions.append(tb)
+    # Also scan for captions that _classify_text might have missed
+    for tb in texts:
+        if tb.role != BlockRole.CAPTION:
+            if len(tb.text.strip()) <= _MAX_CAPTION_CHARS:
+                fig_id, _ = _parse_caption(tb.text)
                 if fig_id:
-                    caption_candidates = [tb]
-                    break
+                    all_captions.append(tb)
 
-        if caption_candidates:
-            cap_block = caption_candidates[0]
-            fig_id, cap_text = _parse_caption(cap_block.text)
-            img.figure_id = fig_id
-            img.caption = cap_text if cap_text else cap_block.text.strip()
-            cap_block.role = BlockRole.CAPTION  # mark consumed
-            caption_blocks[idx] = cap_block
+    logger.info(
+        "Found %d figure captions across %d pages",
+        len(all_captions),
+        len({c.page for c in all_captions}),
+    )
 
-    # ── Drop uncaptioned images ─────────────────────────────────────
-    before = len(images)
-    keep_indices = [i for i, img in enumerate(images) if img.figure_id is not None]
-    dropped = before - len(keep_indices)
+    # For each caption, find the best image on the same page
+    matched_images: List[ImageBlock] = []
+    consumed_xrefs: set = set()
+
+    for cap in all_captions:
+        fig_id, cap_text = _parse_caption(cap.text)
+        if not fig_id:
+            continue
+
+        # Find images on the same page that are ABOVE the caption
+        # (image.y1 <= caption.y0, i.e. image bottom is above caption top)
+        # or overlapping vertically (image extends into caption area)
+        candidates: List[Tuple[float, ImageBlock]] = []
+        for img in images:
+            if img.page != cap.page:
+                continue
+            if img.xref in consumed_xrefs:
+                continue
+
+            # Distance: prefer images whose bottom edge is just above
+            # the caption's top edge (small positive distance)
+            dist = cap.bbox.y0 - img.bbox.y1  # positive = image is above
+
+            # Accept images above the caption (dist >= 0) or slightly
+            # overlapping (dist >= -50).  Also accept images below if
+            # very close (for rare layouts where caption is above image).
+            if dist >= -50:
+                candidates.append((abs(dist), img))
+
+        if not candidates:
+            # Fallback: nearest image on the same page regardless of position
+            for img in images:
+                if img.page != cap.page or img.xref in consumed_xrefs:
+                    continue
+                vdist = abs(cap.bbox.cy - img.bbox.cy)
+                candidates.append((vdist, img))
+
+        if not candidates:
+            logger.debug("No image found for Fig %s on page %d", fig_id, cap.page)
+            continue
+
+        # Pick the closest image
+        candidates.sort(key=lambda x: x[0])
+        best_img = candidates[0][1]
+
+        best_img.figure_id = fig_id
+        best_img.caption = cap_text if cap_text else cap.text.strip()
+        consumed_xrefs.add(best_img.xref)
+        cap.role = BlockRole.CAPTION
+
+        logger.debug(
+            "Caption Fig %s (page %d) → image xref=%d",
+            fig_id, cap.page, best_img.xref,
+        )
+
+    # ── Keep only captioned images ──────────────────────────────────
+    captioned = [img for img in images if img.figure_id is not None]
+    dropped = len(images) - len(captioned)
     if dropped:
         logger.info(
             "Dropped %d uncaptioned images (decorative / portraits)", dropped
         )
 
-    # ── Render surviving images, cropped above caption ──────────────
-    seen_hashes: Dict[str, bool] = {}
+    # ── Deduplicate by figure_id:xref ───────────────────────────────
+    seen_fig_xref: Dict[str, bool] = {}
+    deduped: List[ImageBlock] = []
+    for img in captioned:
+        key = f"{img.figure_id}:{img.xref}"
+        if key in seen_fig_xref:
+            continue
+        seen_fig_xref[key] = True
+        deduped.append(img)
+
+    # ── Render via page.get_pixmap ──────────────────────────────────
+    # get_pixmap composites SMask/alpha correctly against white bg.
     rendered: List[ImageBlock] = []
+    seen_hashes: Dict[str, bool] = {}
 
-    for idx in keep_indices:
-        img = images[idx]
-        if img.source_rect is None:
-            continue
+    for img in deduped:
+        try:
+            page = doc[img.page]
+            rect = fitz.Rect(img.bbox.x0, img.bbox.y0, img.bbox.x1, img.bbox.y1)
 
-        page = doc[img.page]
-        clip = fitz.Rect(img.source_rect)  # copy
+            mat = fitz.Matrix(2, 2)  # 2x upscale for quality
+            pix = page.get_pixmap(clip=rect, matrix=mat, alpha=False)
 
-        # Crop: if we found a caption, end the image at the caption's
-        # top edge so no text below the caption leaks into the PNG.
-        cap_block = caption_blocks.get(idx)
-        if cap_block is not None:
-            clip.y1 = min(clip.y1, cap_block.bbox.y0)
+            if _is_blank_pixmap(pix):
+                continue
 
-        # Safety: skip if crop made the rect degenerate
-        if clip.width < MIN_IMAGE_DIMENSION or clip.height < MIN_IMAGE_DIMENSION:
-            continue
+            png_bytes = pix.tobytes("png")
+            h = _content_hash(png_bytes)
+            if h in seen_hashes:
+                continue
+            seen_hashes[h] = True
 
-        mat = fitz.Matrix(2, 2)
-        pix = page.get_pixmap(clip=clip, matrix=mat, alpha=False)
+            img.image_bytes = png_bytes
+            img.content_hash = h
+            rendered.append(img)
+        except Exception:
+            logger.debug(
+                "Failed to render image xref=%d (Fig %s)",
+                img.xref, img.figure_id,
+            )
 
-        if _is_blank_pixmap(pix):
-            continue
-
-        png_bytes = pix.tobytes("png")
-        h = _content_hash(png_bytes)
-        if h in seen_hashes:
-            continue
-        seen_hashes[h] = True
-
-        img.image_bytes = png_bytes
-        img.content_hash = h
-        img.bbox = BBox.from_fitz(clip)  # update bbox to cropped region
-        rendered.append(img)
-
+    logger.info(
+        "Image association complete: %d figures rendered from %d captions",
+        len(rendered), len(all_captions),
+    )
     return rendered
 
 
