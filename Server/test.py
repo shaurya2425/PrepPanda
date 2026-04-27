@@ -4,125 +4,81 @@ import os
 import uuid
 
 from dotenv import load_dotenv
-from google import genai
 
-from Core.Embedder import Embedder
+from Core.Parser.VisualParser import parse_pdf_visual
 from Core.Storage.BucketHandler import BucketHandler
-from Core.Storage.PostgresHandler import PostgresHandler
-from Core.Storage.VectorHandler import VectorHandler
 
-# Setup logging to stdout
+# Setup logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(levelname)s: %(message)s"
 )
 logger = logging.getLogger(__name__)
 
-
-class GeminiLLM:
-    """Wrapper to expose an async `generate()` method to the Embedder."""
-    def __init__(self, api_key: str):
-        self.client = genai.Client(api_key=api_key)
-
-    async def generate(self, prompt: str) -> str:
-        response = await self.client.aio.models.generate_content(
-            model='gemma-4-31b-it',
-            contents=prompt,
-        )
-        return response.text
-
-
-class GeminiEmbedModel:
-    """Wrapper to expose an async `embed()` method to the Embedder."""
-    def __init__(self, api_key: str):
-        self.client = genai.Client(api_key=api_key)
-
-    async def embed(self, texts: list[str]) -> list[list[float]]:
-        # Embed each text individually — Gemini's embed_content treats a
-        # list of strings as parts of ONE content (returning 1 embedding),
-        # not as separate items.
-        results: list[list[float]] = []
-        for text in texts:
-            response = await self.client.aio.models.embed_content(
-                model='gemini-embedding-2-preview',
-                contents=text,
-            )
-            results.append(response.embeddings[0].values)
-        return results
-
-
 async def main():
     # Load env vars from .env
     load_dotenv()
-
-    # ── 1. Setup API Keys & Gemini Wrappers ─────────────────────────
-    api_key = os.environ.get("GEMINI_API_KEY", "YOUR_API_KEY")
-    if api_key == "YOUR_API_KEY":
-        logger.warning("No GEMINI_API_KEY set. This will fail if not injected properly.")
-
-    llm = GeminiLLM(api_key=api_key)
-    embed_model = GeminiEmbedModel(api_key=api_key)
-
-    # ── 2. Instantiate Handlers ─────────────────────────────────────
-    pg = PostgresHandler()
-    vec = VectorHandler()
-    bucket = BucketHandler()
-
-    # NOTE: You need proper env vars for Postgres/Bucket connections.
-    # e.g., DATABASE_URL, S3_ACCESS_KEY, S3_SECRET_KEY, S3_BUCKET_NAME, etc.
+    
+    # ── 1. Instantiate Handlers ─────────────────────────────────────
     try:
-        await pg.connect()
-        await vec.connect()
-        logger.info("Connected to databases.")
+        bucket = BucketHandler()
+        logger.info("BucketHandler instantiated successfully.")
     except Exception as e:
-        logger.error(f"Failed to connect to databases. Are env vars set? Error: {e}")
+        logger.error(f"Failed to instantiate BucketHandler. Are env vars set? Error: {e}")
         return
 
-    # ── 3. Initialise Embedder ──────────────────────────────────────
-    embedder = Embedder(
-        pg=pg,
-        vec=vec,
-        bucket=bucket,
-        llm_client=llm,
-        embed_model=embed_model,
-    )
-
-    # ── 4. Set up DB Chapter (Foreign Key constraint) ───────────────
-    try:
-        # We need a valid chapter in the DB to associate the nodes with
-        chapter = await pg.create_chapter(
-            title="Test Chapter: lebo101",
-            subject="Testing",
-            pdf_url="local://lebo101.pdf"
-        )
-        chapter_id = str(chapter["id"])
-        logger.info(f"Created testing chapter in DB: {chapter_id}")
-    except Exception as e:
-        logger.warning(f"Could not create chapter (possibly core.chapters table missing or error): {e}")
-        # We'll just generate a dummy ID to proceed, but if DB enforces FK, node insertion will fail
-        chapter_id = str(uuid.uuid4())
-        logger.info(f"Falling back to dummy chapter ID: {chapter_id}")
-
-    # ── 5. Run the Pipeline ─────────────────────────────────────────
+    # ── 2. Run the Visual Parser ────────────────────────────────────
     pdf_path = "lebo101.pdf"
     if not os.path.exists(pdf_path):
         logger.error(f"PDF not found at {pdf_path}")
         return
 
-    logger.info(f"Starting Embedder pipeline for: {pdf_path}")
-    logger.info("This will extract text, chunk it structurally, and insert nodes & embeddings...")
-
+    logger.info(f"Starting VisualParser for: {pdf_path}")
     try:
-        node_ids = await embedder.process_pdf(chapter_id, pdf_path)
-        logger.info(f"Pipeline finished! Created & embedded {len(node_ids)} nodes.")
+        # VisualParser is synchronous, we don't need to await it
+        chunks = parse_pdf_visual(pdf_path)
+        logger.info(f"VisualParser finished! Extracted {len(chunks)} chunks.")
     except Exception as e:
-        logger.exception(f"Pipeline failed: {e}")
+        logger.exception(f"VisualParser failed: {e}")
+        return
 
-    # ── 6. Cleanup ──────────────────────────────────────────────────
-    await pg.disconnect()
-    await vec.disconnect()
-    logger.info("Disconnected from databases.")
+    # ── 3. Upload Images ────────────────────────────────────────────
+    logger.info("Uploading extracted images to Bucket...")
+    chapter_id = str(uuid.uuid4())
+    upload_count = 0
+    
+    for i, chunk in enumerate(chunks):
+        if not chunk.images:
+            continue
+            
+        for j, img in enumerate(chunk.images):
+            # Generate a filename
+            fig_id = img.figure_id or f"unlabeled_{i}_{j}"
+            
+            # Clean up the caption for the filename
+            safe_caption = ""
+            if img.caption:
+                # Remove non-alphanumeric characters and replace spaces with underscores
+                safe_caption = "".join([c if c.isalnum() else "_" for c in img.caption])
+                # Remove consecutive underscores
+                while "__" in safe_caption:
+                    safe_caption = safe_caption.replace("__", "_")
+                safe_caption = safe_caption.strip("_")[:30]
+            
+            if not safe_caption:
+                safe_caption = "no_caption"
+                
+            filename = f"test_visual/{chapter_id}/fig_{fig_id}_{safe_caption}.png"
+            
+            try:
+                # bucket.upload_bytes is synchronous
+                url = bucket.upload_bytes(img.image_bytes, filename, "image/png")
+                logger.info(f"Uploaded Image (Chunk {i}, Fig {img.figure_id}): {url}")
+                upload_count += 1
+            except Exception as e:
+                logger.error(f"Failed to upload image {filename}: {e}")
 
+    logger.info(f"Finished uploading {upload_count} images.")
 
 if __name__ == "__main__":
     asyncio.run(main())

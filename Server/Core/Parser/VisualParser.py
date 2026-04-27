@@ -34,7 +34,9 @@ from typing import Dict, List, Optional, Tuple
 
 import fitz  # PyMuPDF
 
-from Core.Embedder.constants import MIN_IMAGE_AREA, MIN_IMAGE_DIMENSION
+# Image extraction thresholds
+MIN_IMAGE_DIMENSION = 50   # px – skip images narrower/shorter than this
+MIN_IMAGE_AREA = 5000      # px² – skip tiny decorative images
 
 logger = logging.getLogger(__name__)
 
@@ -155,12 +157,14 @@ class TextBlock:
 @dataclass
 class ImageBlock:
     """A positioned image extracted from a single page."""
-    image_bytes: bytes          # PNG data
+    image_bytes: bytes          # PNG data (empty until rendering)
     bbox: BBox
     page: int
     figure_id: Optional[str] = None   # e.g. "1.1"
     caption: Optional[str] = None
     content_hash: str = ""
+    # Original rect for deferred rendering (crop before render)
+    source_rect: Optional[fitz.Rect] = field(default=None, repr=False)
 
 
 @dataclass
@@ -318,7 +322,7 @@ def extract_page_elements(
                 TextBlock(text=text, bbox=bbox, page=page_num, role=role)
             )
 
-        # ── Images ──────────────────────────────────────────────────
+        # ── Images (collect rects only — rendering deferred) ────────
         for img_info in page.get_images(full=True):
             xref = img_info[0]
             try:
@@ -332,25 +336,12 @@ def extract_page_elements(
                 if rect.width * rect.height < MIN_IMAGE_AREA:
                     continue
 
-                # Render from page (handles SMask, colourspace, transforms)
-                mat = fitz.Matrix(2, 2)
-                pix = page.get_pixmap(clip=rect, matrix=mat, alpha=False)
-
-                if _is_blank_pixmap(pix):
-                    continue
-
-                png_bytes = pix.tobytes("png")
-                h = _content_hash(png_bytes)
-                if h in seen_hashes:
-                    continue
-                seen_hashes[h] = True
-
                 all_images.append(
                     ImageBlock(
-                        image_bytes=png_bytes,
+                        image_bytes=b"",  # rendered later after crop
                         bbox=BBox.from_fitz(rect),
                         page=page_num,
-                        content_hash=h,
+                        source_rect=rect,
                     )
                 )
             except Exception:
@@ -393,12 +384,19 @@ def _find_nearest_text(
 def associate_images(
     texts: List[TextBlock],
     images: List[ImageBlock],
+    doc: fitz.Document,
 ) -> List[ImageBlock]:
-    """Attach caption, figure_id, and nearby context to each image.
+    """Attach caption, figure_id to each image, then render.
 
-    Mutates the ``ImageBlock`` objects in-place and returns them.
+    Images are cropped to end at the caption's top edge so that body
+    text below the caption is never included in the rendered PNG.
+    Uncaptioned images (decorative elements) are dropped entirely.
+
+    Mutates ``ImageBlock`` objects in-place and returns the filtered list.
     """
-    for img in images:
+    caption_blocks: Dict[int, TextBlock] = {}  # img index → caption block
+
+    for idx, img in enumerate(images):
         # 1. Caption — closest caption-role block below image
         caption_candidates = _find_nearest_text(
             img, texts, role_filter=BlockRole.CAPTION, max_gap=CAPTION_VERTICAL_GAP,
@@ -424,8 +422,57 @@ def associate_images(
             img.figure_id = fig_id
             img.caption = cap_text if cap_text else cap_block.text.strip()
             cap_block.role = BlockRole.CAPTION  # mark consumed
+            caption_blocks[idx] = cap_block
 
-    return images
+    # ── Drop uncaptioned images ─────────────────────────────────────
+    before = len(images)
+    keep_indices = [i for i, img in enumerate(images) if img.figure_id is not None]
+    dropped = before - len(keep_indices)
+    if dropped:
+        logger.info(
+            "Dropped %d uncaptioned images (decorative / portraits)", dropped
+        )
+
+    # ── Render surviving images, cropped above caption ──────────────
+    seen_hashes: Dict[str, bool] = {}
+    rendered: List[ImageBlock] = []
+
+    for idx in keep_indices:
+        img = images[idx]
+        if img.source_rect is None:
+            continue
+
+        page = doc[img.page]
+        clip = fitz.Rect(img.source_rect)  # copy
+
+        # Crop: if we found a caption, end the image at the caption's
+        # top edge so no text below the caption leaks into the PNG.
+        cap_block = caption_blocks.get(idx)
+        if cap_block is not None:
+            clip.y1 = min(clip.y1, cap_block.bbox.y0)
+
+        # Safety: skip if crop made the rect degenerate
+        if clip.width < MIN_IMAGE_DIMENSION or clip.height < MIN_IMAGE_DIMENSION:
+            continue
+
+        mat = fitz.Matrix(2, 2)
+        pix = page.get_pixmap(clip=clip, matrix=mat, alpha=False)
+
+        if _is_blank_pixmap(pix):
+            continue
+
+        png_bytes = pix.tobytes("png")
+        h = _content_hash(png_bytes)
+        if h in seen_hashes:
+            continue
+        seen_hashes[h] = True
+
+        img.image_bytes = png_bytes
+        img.content_hash = h
+        img.bbox = BBox.from_fitz(clip)  # update bbox to cropped region
+        rendered.append(img)
+
+    return rendered
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -623,7 +670,7 @@ def parse_pdf_visual(pdf_path: str) -> List[VisualChunk]:
     doc = fitz.open(pdf_path)
     try:
         texts, images = extract_page_elements(doc)
-        images = associate_images(texts, images)
+        images = associate_images(texts, images, doc)
         chunks = build_visual_chunks(texts, images)
     finally:
         doc.close()
