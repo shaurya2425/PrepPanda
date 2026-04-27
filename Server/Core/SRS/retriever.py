@@ -145,29 +145,66 @@ class Retriever:
         # ── 2. Embed ────────────────────────────────────────────────
         query_vec = self._embedder.encode([norm_query])[0]
 
-        # ── 3. Hybrid search ────────────────────────────────────────
+        # ── 3. Hybrid search (Weighted 70/30) ───────────────────────
+        # Fetch a larger pool for scoring
+        pool_size = 30
         semantic_hits = await self._pg.search_chunks_semantic(
             query_embedding=query_vec,
             chapter_id=chapter_id,
-            limit=self._semantic_k,
+            limit=pool_size,
         )
         keyword_hits = await self._pg.search_chunks_keyword(
             query=norm_query,
             chapter_id=chapter_id,
-            limit=self._keyword_k,
+            limit=pool_size,
         )
 
-        # Merge & deduplicate, preserving order (semantic first)
-        seen_ids: set = set()
-        merged: List[Dict[str, Any]] = []
-        for chunk in semantic_hits + keyword_hits:
-            cid = chunk["chunk_id"]
-            if cid not in seen_ids:
-                seen_ids.add(cid)
-                merged.append(chunk)
+        chunk_map: Dict[uuid.UUID, Dict[str, Any]] = {}
+        sem_scores: Dict[uuid.UUID, float] = {}
+        kwd_scores: Dict[uuid.UUID, float] = {}
+
+        for hit in semantic_hits:
+            cid = hit["chunk_id"]
+            chunk_map[cid] = hit
+            sem_scores[cid] = hit.get("similarity_score", 0.0)
+
+        for hit in keyword_hits:
+            cid = hit["chunk_id"]
+            if cid not in chunk_map:
+                chunk_map[cid] = hit
+            kwd_scores[cid] = hit.get("rank", 0.0)
+
+        # Min-max scaling helper
+        def _normalize(scores: Dict[uuid.UUID, float]) -> Dict[uuid.UUID, float]:
+            if not scores:
+                return {}
+            vals = list(scores.values())
+            min_val, max_val = min(vals), max(vals)
+            rng = max_val - min_val
+            if rng == 0:
+                return {k: 1.0 for k in scores}
+            return {k: (v - min_val) / rng for k, v in scores.items()}
+
+        norm_sem = _normalize(sem_scores)
+        norm_kwd = _normalize(kwd_scores)
+
+        # Compute hybrid score
+        hybrid_list: List[tuple[float, Dict[str, Any]]] = []
+        for cid, chunk in chunk_map.items():
+            # If a chunk didn't appear in one search, its normalized score is 0
+            s = norm_sem.get(cid, 0.0)
+            k = norm_kwd.get(cid, 0.0)
+            hybrid_score = (0.7 * s) + (0.3 * k)
+            hybrid_list.append((hybrid_score, chunk))
+
+        # Sort descending and take top K
+        hybrid_list.sort(key=lambda x: x[0], reverse=True)
+        top_k = self._semantic_k + self._keyword_k
+        merged = [chunk for score, chunk in hybrid_list[:top_k]]
+        seen_ids = {c["chunk_id"] for c in merged}
 
         logger.info(
-            "Search: %d semantic + %d keyword → %d unique chunks",
+            "Hybrid Search: %d semantic pool + %d keyword pool → top %d chunks selected",
             len(semantic_hits), len(keyword_hits), len(merged),
         )
 

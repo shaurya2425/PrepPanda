@@ -14,7 +14,11 @@ on lebo101.pdf and populates the full DB schema.
 import asyncio
 import logging
 import os
+import sys
 import uuid
+
+# Add the parent directory to sys.path to allow importing from Core
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from dotenv import load_dotenv
 
@@ -42,7 +46,13 @@ async def main() -> None:
     # ── Validate PDF ─────────────────────────────────────────────────
     if not os.path.exists(PDF_PATH):
         logger.error("PDF not found: %s", PDF_PATH)
-        return
+        # Attempt to look in parent directory if run from tests/
+        parent_pdf_path = os.path.join("..", PDF_PATH)
+        if os.path.exists(parent_pdf_path):
+            global PDF_PATH
+            PDF_PATH = parent_pdf_path
+        else:
+            return
 
     # ── Init handlers ─────────────────────────────────────────────────
     try:
@@ -92,6 +102,7 @@ async def main() -> None:
             "  Chunks:     %d  (embedded: %d)\n"
             "  Images:     %d\n"
             "  Links:      %d\n"
+            "  Chapter ID: %s\n"
             "═══════════════════════════════════════",
             BOOK_TITLE,
             CHAPTER_TITLE,
@@ -99,6 +110,7 @@ async def main() -> None:
             result.embedded_count,
             result.image_count,
             result.link_count,
+            result.chapter_id,
         )
 
     except Exception as e:

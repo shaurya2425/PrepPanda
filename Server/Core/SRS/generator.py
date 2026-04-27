@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 # Config
 # ─────────────────────────────────────────────────────────────────────
 
-DEFAULT_MODEL = "gemini-2.0-flash"
+DEFAULT_MODEL = "gemini-3-flash-preview"
 DEFAULT_TEMPERATURE = 0.3
 DEFAULT_MAX_TOKENS = 4096
 
