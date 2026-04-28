@@ -55,6 +55,7 @@ class IngestResult:
     image_count: int = 0
     link_count: int = 0
     embedded_count: int = 0
+    pdf_url: Optional[str] = None        # S3 URL of the uploaded raw PDF
     # Detailed records for downstream use (e.g. embedding pass)
     chunk_records: List[Dict[str, Any]] = field(default_factory=list)
     image_records: Dict[str, Dict[str, Any]] = field(default_factory=dict)
@@ -111,6 +112,7 @@ class ChapterPipeline:
         book_id: uuid.UUID,
         chapter_number: int,
         chapter_title: str,
+        pdf_bytes: Optional[bytes] = None,
     ) -> IngestResult:
         """Run the full parse → upload → store → link pipeline.
 
@@ -124,6 +126,10 @@ class ChapterPipeline:
             Chapter number within the book.
         chapter_title : str
             Human-readable chapter title.
+        pdf_bytes : bytes, optional
+            Raw PDF bytes.  When provided the file is uploaded to the
+            bucket as ``chapters/<chapter_id>/raw.pdf`` and the URL is
+            stored on the chapter row.
 
         Returns
         -------
@@ -140,6 +146,19 @@ class ChapterPipeline:
         logger.info("Created chapter '%s' (id=%s)", chapter_title, chapter_id)
 
         result = IngestResult(chapter_id=chapter_id)
+
+        # ── 1b. Upload raw PDF to bucket ────────────────────────────
+        if pdf_bytes:
+            try:
+                pdf_key = f"chapters/{chapter_id}/raw.pdf"
+                pdf_url = self._bucket.upload_bytes(
+                    pdf_bytes, pdf_key, "application/pdf"
+                )
+                result.pdf_url = pdf_url
+                await self._pg.update_chapter_pdf_url(chapter_id, pdf_url)
+                logger.info("Raw PDF uploaded: %s", pdf_url)
+            except Exception as exc:
+                logger.warning("PDF upload failed (non-fatal): %s", exc)
 
         # ── 2. Parse text ───────────────────────────────────────────
         logger.info("NodeParser: parsing %s …", pdf_path)

@@ -25,6 +25,7 @@ CREATE TABLE core.chapters (
     book_id        UUID NOT NULL REFERENCES core.books(book_id) ON DELETE CASCADE,
     chapter_number INT NOT NULL,
     title          TEXT NOT NULL,
+    pdf_url        TEXT,            -- S3/bucket URL of the raw PDF
     created_at     TIMESTAMPTZ NOT NULL
 );
 

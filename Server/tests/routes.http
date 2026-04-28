@@ -1,0 +1,324 @@
+### PrepPanda API — HTTP Test Suite
+### Compatible with: VS Code REST Client · JetBrains HTTP Client · httpYac
+###
+### Usage
+### ─────────────────────────────────────────────────────────────────────
+### 1. Start the server:
+###      uvicorn main:app --reload --port 8000
+###
+### 2. Fill in the @chapter_id variable after running §2 (ingest chapter).
+###    You can copy the UUID from the response body.
+###
+### Variables — edit as needed
+### ─────────────────────────────────────────────────────────────────────
+
+@base       = http://localhost:8000
+@admin_key  = preppanda-admin-secret
+@book_id    = FILL_AFTER_§1       # paste UUID from §1 response
+@chapter_id = FILL_AFTER_§2       # paste UUID from §2 response
+
+
+# ═════════════════════════════════════════════════════════════════════
+# 0 ── HEALTH CHECK
+# ═════════════════════════════════════════════════════════════════════
+
+### 0.1  Server liveness
+# @name health
+GET {{base}}/health
+Accept: application/json
+
+
+# ═════════════════════════════════════════════════════════════════════
+# 1 ── ADMIN: BOOKS
+# ═════════════════════════════════════════════════════════════════════
+
+### 1.1  Create a book  →  copy book_id into @book_id above
+# @name create_book
+POST {{base}}/admin/books
+X-Admin-Key: {{admin_key}}
+Content-Type: application/json
+
+{
+  "title":   "Biology Part I – Class XI",
+  "grade":   11,
+  "subject": "biology"
+}
+
+
+### 1.2  Create a book — wrong admin key (expect 403)
+POST {{base}}/admin/books
+X-Admin-Key: wrong-key
+Content-Type: application/json
+
+{
+  "title":   "Should Fail",
+  "grade":   10,
+  "subject": "chemistry"
+}
+
+
+### 1.3  Create a book — no admin key (expect 403)
+POST {{base}}/admin/books
+Content-Type: application/json
+
+{
+  "title":   "Also Fails",
+  "grade":   9,
+  "subject": "physics"
+}
+
+
+# ═════════════════════════════════════════════════════════════════════
+# 2 ── ADMIN: CHAPTERS  (multipart form + PDF upload)
+# ═════════════════════════════════════════════════════════════════════
+
+### 2.1  Ingest a chapter PDF  →  copy chapter_id into @chapter_id above
+###      Replace the file path with the actual path to your PDF.
+# @name ingest_chapter
+POST {{base}}/admin/books/{{book_id}}/chapters
+X-Admin-Key: {{admin_key}}
+Content-Type: multipart/form-data; boundary=----PrepPandaBoundary
+
+------PrepPandaBoundary
+Content-Disposition: form-data; name="chapter_number"
+
+1
+------PrepPandaBoundary
+Content-Disposition: form-data; name="chapter_title"
+
+Sexual Reproduction in Flowering Plants
+------PrepPandaBoundary
+Content-Disposition: form-data; name="pdf"; filename="lebo101.pdf"
+Content-Type: application/pdf
+
+< ./lebo101.pdf
+------PrepPandaBoundary--
+
+
+### 2.2  Ingest chapter — book not found (expect 404)
+POST {{base}}/admin/books/00000000-0000-0000-0000-000000000000/chapters
+X-Admin-Key: {{admin_key}}
+Content-Type: multipart/form-data; boundary=----PrepPandaBoundary
+
+------PrepPandaBoundary
+Content-Disposition: form-data; name="chapter_number"
+
+1
+------PrepPandaBoundary
+Content-Disposition: form-data; name="chapter_title"
+
+Nonexistent Chapter
+------PrepPandaBoundary
+Content-Disposition: form-data; name="pdf"; filename="dummy.pdf"
+Content-Type: application/pdf
+
+< ./lebo101.pdf
+------PrepPandaBoundary--
+
+
+# ═════════════════════════════════════════════════════════════════════
+# 3 ── ADMIN: PYQs (raw text block format in form body)
+# ═════════════════════════════════════════════════════════════════════
+
+### 3.1  Ingest PYQs via form text body — single Q+A pair
+# @name ingest_pyqs_form
+POST {{base}}/admin/books/{{book_id}}/chapters/{{chapter_id}}/pyqs
+X-Admin-Key: {{admin_key}}
+Content-Type: application/x-www-form-urlencoded
+
+body=---Q+5M+2022%0AWhat+is+double+fertilisation%3F+Where+and+how+does+it+take+place%3F%0A---%0A%0A---Ans%0ADouble+fertilisation+is+a+phenomenon+characteristic+of+angiosperms.+In+this+process%2C+out+of+the+two+male+gametes%2C+one+fuses+with+the+egg+cell+%28syngamy%29+and+the+other+fuses+with+the+two+polar+nuclei+%28triple+fusion%29.%0A---
+
+
+### 3.2  Ingest PYQs — multiple blocks with and without answers
+# @name ingest_pyqs_multi
+POST {{base}}/admin/books/{{book_id}}/chapters/{{chapter_id}}/pyqs
+X-Admin-Key: {{admin_key}}
+Content-Type: multipart/form-data; boundary=----PrepPandaBoundary
+
+------PrepPandaBoundary
+Content-Disposition: form-data; name="body"
+
+---Q 3M 2021
+Name the parts of an angiosperm flower in which development of
+male and female gametophyte takes place.
+---
+
+---Ans
+Male gametophyte develops in the microsporangia (anther).
+Female gametophyte develops in the megasporangia (ovule).
+---
+
+---Q 2M 2019
+What is emasculation? When and why does a plant breeder employ it?
+---
+
+---Ans
+Emasculation is the removal of anthers from a bisexual flower before
+pollen is shed. It is done to prevent self-pollination in artificial
+hybridisation experiments.
+---
+
+---Q 5M NEET 2023
+Explain the structure of a mature embryo sac. How does double
+fertilisation occur and what is its significance?
+---
+
+---Q 1M 2020
+Define apomixis.
+---
+
+---Ans
+Apomixis is a mode of asexual reproduction that mimics sexual
+reproduction; seeds are produced without fertilisation.
+---
+------PrepPandaBoundary--
+
+
+### 3.3  Ingest PYQs — malformed (no valid blocks, expect 422)
+POST {{base}}/admin/books/{{book_id}}/chapters/{{chapter_id}}/pyqs
+X-Admin-Key: {{admin_key}}
+Content-Type: multipart/form-data; boundary=----PrepPandaBoundary
+
+------PrepPandaBoundary
+Content-Disposition: form-data; name="body"
+
+This is just plain text with no block markers at all.
+------PrepPandaBoundary--
+
+
+### 3.4  Ingest PYQs — chapter not found (expect 404)
+POST {{base}}/admin/books/{{book_id}}/chapters/00000000-0000-0000-0000-000000000000/pyqs
+X-Admin-Key: {{admin_key}}
+Content-Type: multipart/form-data; boundary=----PrepPandaBoundary
+
+------PrepPandaBoundary
+Content-Disposition: form-data; name="body"
+
+---Q 2M 2022
+What is pollination?
+---
+------PrepPandaBoundary--
+
+
+# ═════════════════════════════════════════════════════════════════════
+# 4 ── ADMIN: PYQs (file upload)
+# ═════════════════════════════════════════════════════════════════════
+
+### 4.1  Ingest PYQs via .txt file upload
+###      The file should contain PYQ blocks in the block format.
+# @name ingest_pyqs_file
+POST {{base}}/admin/books/{{book_id}}/chapters/{{chapter_id}}/pyqs/file
+X-Admin-Key: {{admin_key}}
+Content-Type: multipart/form-data; boundary=----PrepPandaBoundary
+
+------PrepPandaBoundary
+Content-Disposition: form-data; name="file"; filename="pyqs.txt"
+Content-Type: text/plain
+
+---Q 4M CBSE 2022
+Describe the post-fertilisation changes in a flower.
+---
+
+---Ans
+After fertilisation: (1) The zygote develops into an embryo.
+(2) The primary endosperm nucleus develops into endosperm.
+(3) Ovules develop into seeds. (4) Ovary develops into fruit.
+The other floral parts — petals, sepals, stamens, style, and stigma
+— wither and fall off.
+---
+
+---Q 3M NEET 2021
+What is triple fusion? Where does it occur?
+---
+
+---Ans
+Triple fusion is the fusion of one male gamete with the two polar
+nuclei to form the triploid (3n) primary endosperm nucleus (PEN).
+It takes place in the central cell of the embryo sac.
+---
+------PrepPandaBoundary--
+
+
+# ═════════════════════════════════════════════════════════════════════
+# 5 ── SRS: ASK
+# ═════════════════════════════════════════════════════════════════════
+
+### 5.1  Ask a factual question
+# @name srs_ask_factual
+POST {{base}}/srs/ask
+Content-Type: application/json
+
+{
+  "question":   "What is double fertilisation?",
+  "chapter_id": "{{chapter_id}}"
+}
+
+
+### 5.2  Ask an analytical question
+POST {{base}}/srs/ask
+Content-Type: application/json
+
+{
+  "question":   "How do flowering plants ensure successful fertilisation despite having non-motile male gametes?",
+  "chapter_id": "{{chapter_id}}"
+}
+
+
+### 5.3  Ask about a process (should trigger figure references)
+POST {{base}}/srs/ask
+Content-Type: application/json
+
+{
+  "question":   "Explain the structure of a mature embryo sac with reference to figures.",
+  "chapter_id": "{{chapter_id}}"
+}
+
+
+### 5.4  Ask with chapter not found (expect 404)
+POST {{base}}/srs/ask
+Content-Type: application/json
+
+{
+  "question":   "What is photosynthesis?",
+  "chapter_id": "00000000-0000-0000-0000-000000000000"
+}
+
+
+### 5.5  Ask with too-short question (expect 422)
+POST {{base}}/srs/ask
+Content-Type: application/json
+
+{
+  "question":   "Hi",
+  "chapter_id": "{{chapter_id}}"
+}
+
+
+# ═════════════════════════════════════════════════════════════════════
+# 6 ── MINDMAP: NESTED TREE
+# ═════════════════════════════════════════════════════════════════════
+
+### 6.1  Get nested mind-map tree
+# @name mindmap_tree
+GET {{base}}/mindmap/{{chapter_id}}
+Accept: application/json
+
+
+### 6.2  Nested tree — chapter not found (expect 404)
+GET {{base}}/mindmap/00000000-0000-0000-0000-000000000000
+Accept: application/json
+
+
+# ═════════════════════════════════════════════════════════════════════
+# 7 ── MINDMAP: FLAT NODE LIST  (React-Flow / D3 force-graph format)
+# ═════════════════════════════════════════════════════════════════════
+
+### 7.1  Get flat node list with parent_ids
+# @name mindmap_flat
+GET {{base}}/mindmap/{{chapter_id}}/flat
+Accept: application/json
+
+
+### 7.2  Flat list — chapter not found (expect 404)
+GET {{base}}/mindmap/00000000-0000-0000-0000-000000000000/flat
+Accept: application/json

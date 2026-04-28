@@ -79,21 +79,36 @@ class PostgresHandler:
         book_id: uuid.UUID,
         chapter_number: int,
         title: str,
+        pdf_url: Optional[str] = None,
     ) -> Dict[str, Any]:
         pool = self._pool_guard()
         row = await pool.fetchrow(
             """
-            INSERT INTO core.chapters (chapter_id, book_id, chapter_number, title, created_at)
-            VALUES ($1, $2, $3, $4, $5)
+            INSERT INTO core.chapters (chapter_id, book_id, chapter_number, title, pdf_url, created_at)
+            VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING *
             """,
             uuid.uuid4(),
             book_id,
             chapter_number,
             title,
+            pdf_url,
             datetime.utcnow(),
         )
         return self._record_to_dict(row)
+
+    async def update_chapter_pdf_url(
+        self,
+        chapter_id: uuid.UUID,
+        pdf_url: str,
+    ) -> None:
+        """Set (or overwrite) the pdf_url for an existing chapter."""
+        pool = self._pool_guard()
+        await pool.execute(
+            "UPDATE core.chapters SET pdf_url = $2 WHERE chapter_id = $1",
+            chapter_id,
+            pdf_url,
+        )
 
     # ==========================================================
     # CHUNKS (CORE)
