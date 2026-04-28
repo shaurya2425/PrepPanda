@@ -24,6 +24,7 @@ Usage
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 import uuid
@@ -160,17 +161,19 @@ class ChapterPipeline:
             except Exception as exc:
                 logger.warning("PDF upload failed (non-fatal): %s", exc)
 
-        # ── 2. Parse text ───────────────────────────────────────────
+        # ── 2. Parse text (CPU-bound → thread pool) ───────────────────
         logger.info("NodeParser: parsing %s …", pdf_path)
-        text_chunks, image_refs = parse_pdf_text(pdf_path)
+        text_chunks, image_refs = await asyncio.to_thread(
+            parse_pdf_text, pdf_path
+        )
         logger.info(
             "NodeParser: %d chunks, %d figure refs",
             len(text_chunks), len(image_refs),
         )
 
-        # ── 3. Parse images ─────────────────────────────────────────
+        # ── 3. Parse images (CPU-bound → thread pool) ───────────────
         logger.info("VisualParser: parsing %s …", pdf_path)
-        visual_chunks = parse_pdf_visual(pdf_path)
+        visual_chunks = await asyncio.to_thread(parse_pdf_visual, pdf_path)
         visual_images: List[ImageBlock] = []
         for vc in visual_chunks:
             visual_images.extend(vc.images)

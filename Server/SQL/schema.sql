@@ -86,7 +86,8 @@ CREATE INDEX idx_images_position ON core.images(chapter_id, position_index);
 -- ================================
 CREATE TABLE core.pyqs (
     pyq_id        UUID PRIMARY KEY,
-    chapter_id    UUID NOT NULL REFERENCES core.chapters(chapter_id) ON DELETE CASCADE,
+    book_id       UUID NOT NULL REFERENCES core.books(book_id) ON DELETE CASCADE,
+    chapter_id    UUID REFERENCES core.chapters(chapter_id) ON DELETE SET NULL,
 
     question      TEXT NOT NULL,
     answer        TEXT,
@@ -98,6 +99,7 @@ CREATE TABLE core.pyqs (
     created_at    TIMESTAMPTZ NOT NULL
 );
 
+CREATE INDEX idx_pyq_book ON core.pyqs(book_id);
 CREATE INDEX idx_pyq_chapter ON core.pyqs(chapter_id);
 CREATE INDEX idx_pyq_year ON core.pyqs(year);
 

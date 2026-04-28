@@ -122,7 +122,7 @@ Content-Type: application/pdf
 
 ### 3.1  Ingest PYQs via form text body — single Q+A pair
 # @name ingest_pyqs_form
-POST {{base}}/admin/books/{{book_id}}/chapters/{{chapter_id}}/pyqs
+POST {{base}}/admin/books/{{book_id}}/pyqs
 X-Admin-Key: {{admin_key}}
 Content-Type: application/x-www-form-urlencoded
 
@@ -131,7 +131,7 @@ body=---Q+5M+2022%0AWhat+is+double+fertilisation%3F+Where+and+how+does+it+take+p
 
 ### 3.2  Ingest PYQs — multiple blocks with and without answers
 # @name ingest_pyqs_multi
-POST {{base}}/admin/books/{{book_id}}/chapters/{{chapter_id}}/pyqs
+POST {{base}}/admin/books/{{book_id}}/pyqs
 X-Admin-Key: {{admin_key}}
 Content-Type: multipart/form-data; boundary=----PrepPandaBoundary
 
@@ -175,7 +175,7 @@ reproduction; seeds are produced without fertilisation.
 
 
 ### 3.3  Ingest PYQs — malformed (no valid blocks, expect 422)
-POST {{base}}/admin/books/{{book_id}}/chapters/{{chapter_id}}/pyqs
+POST {{base}}/admin/books/{{book_id}}/pyqs
 X-Admin-Key: {{admin_key}}
 Content-Type: multipart/form-data; boundary=----PrepPandaBoundary
 
@@ -186,8 +186,8 @@ This is just plain text with no block markers at all.
 ------PrepPandaBoundary--
 
 
-### 3.4  Ingest PYQs — chapter not found (expect 404)
-POST {{base}}/admin/books/{{book_id}}/chapters/00000000-0000-0000-0000-000000000000/pyqs
+### 3.4  Ingest PYQs — book not found (expect 404)
+POST {{base}}/admin/books/00000000-0000-0000-0000-000000000000/pyqs
 X-Admin-Key: {{admin_key}}
 Content-Type: multipart/form-data; boundary=----PrepPandaBoundary
 
@@ -207,7 +207,7 @@ What is pollination?
 ### 4.1  Ingest PYQs via .txt file upload
 ###      The file should contain PYQ blocks in the block format.
 # @name ingest_pyqs_file
-POST {{base}}/admin/books/{{book_id}}/chapters/{{chapter_id}}/pyqs/file
+POST {{base}}/admin/books/{{book_id}}/pyqs/file
 X-Admin-Key: {{admin_key}}
 Content-Type: multipart/form-data; boundary=----PrepPandaBoundary
 
@@ -338,8 +338,8 @@ Accept: application/json
 # ⚠  Raw PDFs (each up to ~65 MB) are uploaded to the bucket.
 # ═════════════════════════════════════════════════════════════════════
 
-@bio12_book_id    = FILL_AFTER_§8   # paste from §8.1 response → book_id
-@bio12_chapter_id = FILL_AFTER_§8   # paste any chapter_id from §8.1 response
+@bio12_book_id    = dde2c231-ef27-4d2d-83b6-eb8b85f2f5e4
+@bio12_chapter_id = 348d294b-6b6e-4b5b-8414-6b7e432a7ff0
 
 ### 8.1  Ingest all 13 chapters of NCERT Biology Class 12
 ###      File paths are relative to this .http file (tests/).
@@ -539,3 +539,130 @@ Accept: application/json
 ### 9.4  MindMap — flat node list (React-Flow format)
 GET {{base}}/mindmap/{{bio12_chapter_id}}/flat
 Accept: application/json
+
+
+# ═════════════════════════════════════════════════════════════════════
+# 10 ── PYQ INGESTION — 2026 Biology Paper (13 questions)
+#
+# PYQs are ingested at the BOOK level.  The server automatically maps
+# each question to the best-matching chapter via embedding cosine
+# similarity against all stored chunks.
+#
+# Header format used: "---Q <n> Marks <m> Year <yyyy>"
+# Parser handles both this and legacy "---Q <n>M <yyyy>" format.
+#
+# Prereq: §8.1 must have run (book + chapters ingested + embedded).
+# ═════════════════════════════════════════════════════════════════════
+
+### 10.1  Ingest all 13 questions via .txt file upload (recommended)
+###       Uses pyqs_2026.txt — the fixture file next to this .http file.
+###       Each PYQ is auto-mapped to the most relevant chapter.
+# @name ingest_pyqs_2026_file
+POST {{base}}/admin/books/a6208d0e-62c8-4785-9f07-aff43c385924/pyqs/file
+X-Admin-Key: {{admin_key}}
+Content-Type: multipart/form-data; boundary=----Pyq2026Boundary
+
+------Pyq2026Boundary
+Content-Disposition: form-data; name="file"; filename="pyqs_2026.txt"
+Content-Type: text/plain
+
+< ./pyqs_2026.txt
+------Pyq2026Boundary--
+
+
+### 10.2  Ingest via curl (use this if REST Client can't resolve the file)
+# curl -X POST http://localhost:8000/admin/books/<BOOK_ID>/pyqs/file \
+#   -H "X-Admin-Key: preppanda-admin-secret" \
+#   -F "file=@tests/pyqs_2026.txt;type=text/plain"
+
+
+### 10.3  Inline body — single 2026 question (parser format verification)
+###       Tests that "Marks N Year YYYY" is parsed into marks + year fields.
+###       Server will auto-map this to a chapter about Human Health.
+# @name ingest_pyqs_2026_inline
+POST {{base}}/admin/books/{{bio12_book_id}}/pyqs
+X-Admin-Key: {{admin_key}}
+Content-Type: multipart/form-data; boundary=----InlinePyqBoundary
+
+------InlinePyqBoundary
+Content-Disposition: form-data; name="body"
+
+---Q 1 Marks 2 Year 2026
+Mention the parts of human body that get affected by Pneumonia and common cold
+infections. Write the causative agents of the two diseases.
+---
+
+---Ans
+* **Pneumonia:** Affects the **alveoli** (air sacs) of the lungs.
+  Causative agents: *Streptococcus pneumoniae* and *Haemophilus influenzae*.
+* **Common Cold:** Affects the **nose and respiratory passage**.
+  Causative agents: **Rhinoviruses**.
+---
+------InlinePyqBoundary--
+
+
+### 10.4  Inline body — question without answer (answer = null expected)
+POST {{base}}/admin/books/{{bio12_book_id}}/pyqs
+X-Admin-Key: {{admin_key}}
+Content-Type: multipart/form-data; boundary=----NoAnsBoundary
+
+------NoAnsBoundary
+Content-Disposition: form-data; name="body"
+
+---Q 99 Marks 5 Year 2026
+This question intentionally has no answer block to verify answer=null storage.
+---
+------NoAnsBoundary--
+
+
+### 10.5  Inline body — OR variant header (marks + year still extracted)
+POST {{base}}/admin/books/{{bio12_book_id}}/pyqs
+X-Admin-Key: {{admin_key}}
+Content-Type: multipart/form-data; boundary=----OrBoundary
+
+------OrBoundary
+Content-Disposition: form-data; name="body"
+
+---Q 2 (OR) Marks 2 Year 2026
+(a) Cattle excreta is important source for producing a domestic fuel.
+Name the fuel and write its main components.
+(b) Write the biological process responsible for the production of this fuel.
+---
+
+---Ans
+(a) **Fuel:** Biogas (Gobar gas). **Main Components:** Methane ($CH_4$), CO₂, H₂S.
+(b) **Process:** Anaerobic digestion / Methanogenesis by methanogenic bacteria.
+---
+------OrBoundary--
+
+
+### 10.6  Legacy format still works (5M 2022 style)
+POST {{base}}/admin/books/{{bio12_book_id}}/pyqs
+X-Admin-Key: {{admin_key}}
+Content-Type: multipart/form-data; boundary=----LegacyBoundary
+
+------LegacyBoundary
+Content-Disposition: form-data; name="body"
+
+---Q 5M 2022
+What is double fertilisation? Where and how does it take place?
+---
+
+---Ans
+Double fertilisation involves two fusions: syngamy (male gamete + egg)
+and triple fusion (male gamete + two polar nuclei → PEN). It occurs in
+the embryo sac of the ovule.
+---
+------LegacyBoundary--
+
+
+### 10.7  Malformed block — no valid markers (expect 422)
+POST {{base}}/admin/books/{{bio12_book_id}}/pyqs
+X-Admin-Key: {{admin_key}}
+Content-Type: multipart/form-data; boundary=----BadPyqBoundary
+
+------BadPyqBoundary
+Content-Disposition: form-data; name="body"
+
+This is just a paragraph of text, no PYQ blocks at all.
+------BadPyqBoundary--

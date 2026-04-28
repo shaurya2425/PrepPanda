@@ -1,0 +1,125 @@
+---Q 1 Marks 2 Year 2026
+Mention the parts of human body that get affected by Pneumonia and common cold infections. Write the causative agents of the two diseases.
+---
+---Ans
+* **Pneumonia:** Affects the **alveoli** (air sacs) of the lungs. Causative agents: *Streptococcus pneumoniae* and *Haemophilus influenzae*.
+* **Common Cold:** Affects the **nose and respiratory passage** (but not the lungs). Causative agents: **Rhinoviruses**.
+---
+
+---Q 2 Marks 2 Year 2026
+State the impact of constant mechanical agitation and pumping of air in the aeration tank on the sewage during the biological treatment.
+---
+---Ans
+1.  It allows the **vigorous growth of useful aerobic microbes into flocs** (masses of bacteria associated with fungal filaments).
+2.  These microbes consume the major part of the organic matter in the effluent, significantly **reducing the BOD (Biochemical Oxygen Demand)** of the sewage.
+---
+
+---Q 2 (OR) Marks 2 Year 2026
+(a) Cattle excreta is important source for producing a domestic fuel. Name the fuel and write its main components. (b) Write the biological process that is responsible for the production of this fuel.
+---
+---Ans
+(a) **Fuel:** Biogas (Gobar gas). **Main Components:** Methane ($CH_4$) - approx 50-70%, Carbon dioxide ($CO_2$), and traces of Hydrogen sulphide ($H_2S$).
+(b) **Process:** **Anaerobic digestion/Methanogenesis** carried out by methanogenic bacteria (e.g., *Methanobacterium*).
+---
+
+---Q 3 Marks 2 Year 2026
+(a) Give an example of viral biocontrol agent. (b) Why are they considered to be desirable when an ecologically sensitive area is being treated?
+---
+---Ans
+(a) **Example:** **Baculoviruses** (specifically those belonging to the genus *Nucleopolyhedrovirus*).
+(b) They are desirable because they are **species-specific and narrow-spectrum** insecticidal applications. They have no negative impacts on plants, mammals, birds, fish, or even non-target insects, preserving the ecological balance.
+---
+
+---Q 4 Marks 2 Year 2026
+What is the importance of female Anopheles mosquitoes in the life of a malarial Parasite Plasmodium?
+---
+---Ans
+1.  **Vector:** It acts as the carrier that transmits the infectious stage (sporozoites) from an infected person to a healthy host.
+2.  **Definitive Host:** It is the host where the **sexual stages** (gametocyte fertilization and development) of the *Plasmodium* life cycle occur.
+---
+
+---Q 5 Marks 2 Year 2026
+Study the graph (Population Growth Curves). (a) What is 'Carrying Capacity' in respect of Curve 'B' indicative of? (b) Mention the action of possible natural forces that could have lead to curve 'B'.
+---
+---Ans
+(a) **Carrying Capacity (K):** Represents the maximum number of individuals of a population that a given habitat can support with its limited resources.
+(b) **Natural Forces:** Limited resource availability (food and space), **competition** between individuals, predation, and disease. These act as "environmental resistance" to keep the growth logistic.
+---
+
+---Q 6 (OR) Marks 2 Year 2026
+"Stability of community depends upon its species richness." How did David Tilman show this experimentally?
+---
+---Ans
+David Tilman's long-term ecosystem experiments using outdoor plots showed:
+1.  Plots with **more species** showed less year-to-year variation in total biomass.
+2.  Increased diversity contributed to **higher productivity**, proving that species richness is critical for community stability and resilience.
+---
+
+---Q 7 Marks 3 Year 2026
+Identify the location of countries in climatic regions based on species richness and explain the pattern.
+---
+---Ans
+(i) **Locations:**
+* Panama (560 species): **Tropical region** (near the equator).
+* Canada (301 species): **Temperate region**.
+* Denmark (67 species): **Polar/High latitude region**.
+(ii) **Term:** **Latitudinal Gradient**.
+**Reason:** Diversity decreases as we move away from the equator towards the poles. Tropics have remained relatively undisturbed for millions of years, allowing more time for speciation, and receive more solar energy, contributing to higher productivity.
+---
+
+---Q 8 Marks 3 Year 2026
+(a) How many episodes of mass extinctions have taken place? (b) How is current episode different?
+---
+---Ans
+(a) **Five episodes** of mass extinction have occurred; the **sixth extinction** is currently in progress.
+(b) The current episode is different because the **rate of extinction** is estimated to be 100 to 1,000 times faster than pre-human times. It is **anthropogenic** (caused by human activities like habitat fragmentation) rather than due to slow geological/natural changes.
+---
+
+---Q 9 Marks 3 Year 2026
+Name two naturally occurring sources that transfer pathogenic genes into plant/animal cells and their biotech use.
+---
+---Ans
+* **Plant source:** *Agrobacterium tumefaciens* (delivers 'T-DNA' to transform plant cells).
+* **Animal source:** **Retroviruses** (transform normal cells into cancerous cells).
+* **Biotech Use:** These have been "disarmed" and are now used as **cloning vectors** to deliver desirable genes into host organisms (e.g., creating Bt crops or in human gene therapy).
+---
+
+---Q 10 Marks 3 Year 2026
+Enumerate the main sources of bio-fertilisers giving one example of each.
+---
+---Ans
+1.  **Bacteria:** e.g., *Rhizobium* (symbiotic) or *Azotobacter* (free-living).
+2.  **Fungi:** e.g., *Glomus* (forming Mycorrhiza which helps in phosphorus absorption).
+3.  **Cyanobacteria:** e.g., *Anabaena* or *Nostoc* (important in paddy fields).
+---
+
+---Q 11 Marks 3 Year 2026
+Explain reason the action plan followed by organic farmers regarding biodiversity.
+---
+---Ans
+Organic farmers avoid systemic chemicals, believing that **diversity creates a system of checks and balances**. Their action plan involves:
+1.  **Biocontrol:** Using natural predators/parasites instead of pesticides to manage pest populations.
+2.  **Sustainability:** Keeping "pests" at manageable levels rather than eradicating them, as they serve as food for beneficial predatory insects.
+---
+
+---Q 12 Marks 3 Year 2026
+(i) Role of selectable marker. (ii) Name one for E.coli. (iii) Why useful?
+---
+---Ans
+(i) It helps in **identifying and eliminating non-transformants** and selectively permitting the growth of the transformants.
+(ii) **Ampicillin resistance gene** ($amp^R$).
+(iii) It is useful because normal *E. coli* cells do not carry resistance against antibiotics; hence, only those that have taken up the plasmid will survive on an ampicillin-containing medium.
+---
+
+---Q 13 Marks 5 Year 2026
+Case Study: Bt corn and corn borers (A, B, C).
+---
+---Ans
+(i) **Species A.** Reason: The graph shows the most drastic reduction in leaf area damage (from approx 80 $mm^2$ in Non-Bt to approx 10 $mm^2$ in Bt crop), indicating the toxin is highly effective against this species.
+(ii) **Species C.** It shows the least percentage reduction in damage compared to A and B, suggesting it is more resistant to the Bt toxin.
+(iii) **Advice:** Since species B still causes significant damage (approx 20 $mm^2$) to the Bt crop, the farmer should use an **Integrated Pest Management (IPM)** approach, perhaps combining this variety with another Bt trait or localized biocontrol agents.
+(iv) **cryIAb** (controls corn borer).
+(v) **OR - Steps for Isolation/Amplification:**
+1.  **Isolation:** Treat fungal cells with **Chitinase** to break the wall, then use Protease/RNase and chilled ethanol to precipitate pure DNA.
+2.  **Amplification:** Use **PCR (Polymerase Chain Reaction)** involving three steps: Denaturation, Primer Annealing, and Extension using *Taq* Polymerase.
+---

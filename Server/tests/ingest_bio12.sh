@@ -55,7 +55,29 @@ curl -X POST "$BASE/admin/ingest-book" \
   -F "pdfs=@$DIR/lebo111.pdf;type=application/pdf" \
   -F "pdfs=@$DIR/lebo112.pdf;type=application/pdf" \
   -F "pdfs=@$DIR/lebo113.pdf;type=application/pdf" \
-  | python3 -m json.tool
+  | tee /tmp/preppanda_ingest.json | python3 -m json.tool
+
+BOOK_ID=$(python3 -c "import json; print(json.load(open('/tmp/preppanda_ingest.json'))['book_id'])")
 
 echo ""
-echo "✅ Done.  Copy book_id and chapter_ids from the response above."
+echo "✅ Book ingested.  book_id = $BOOK_ID"
+echo ""
+
+# ── Phase 2: Ingest PYQs (auto-mapped to chapters) ──────────────────
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PYQ_FILE="$SCRIPT_DIR/pyqs_2026.txt"
+
+if [ -f "$PYQ_FILE" ]; then
+    echo "▶ Ingesting PYQs from $PYQ_FILE …"
+    curl -s -X POST "$BASE/admin/books/$BOOK_ID/pyqs/file" \
+      -H "X-Admin-Key: $KEY" \
+      -F "file=@$PYQ_FILE;type=text/plain" \
+      | python3 -m json.tool
+    echo ""
+    echo "✅ PYQs ingested and auto-mapped to chapters."
+else
+    echo "⚠  $PYQ_FILE not found — skipping PYQ ingestion."
+fi
+
+echo ""
+echo "✅ All done.  book_id = $BOOK_ID"

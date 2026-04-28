@@ -342,9 +342,10 @@ class PostgresHandler:
 
     async def create_pyq(
         self,
-        chapter_id: uuid.UUID,
+        book_id: uuid.UUID,
         question: str,
         answer: Optional[str] = None,
+        chapter_id: Optional[uuid.UUID] = None,
         year: Optional[int] = None,
         exam: Optional[str] = None,
         marks: Optional[int] = None,
@@ -353,12 +354,14 @@ class PostgresHandler:
         row = await pool.fetchrow(
             """
             INSERT INTO core.pyqs (
-                pyq_id, chapter_id, question, answer, year, exam, marks, created_at
+                pyq_id, book_id, chapter_id, question, answer,
+                year, exam, marks, created_at
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             RETURNING *
             """,
             uuid.uuid4(),
+            book_id,
             chapter_id,
             question,
             answer,
@@ -368,6 +371,18 @@ class PostgresHandler:
             datetime.utcnow(),
         )
         return self._record_to_dict(row)
+
+    async def update_pyq_chapter(
+        self,
+        pyq_id: uuid.UUID,
+        chapter_id: uuid.UUID,
+    ) -> None:
+        """Assign a chapter to a PYQ after semantic mapping."""
+        pool = self._pool_guard()
+        await pool.execute(
+            "UPDATE core.pyqs SET chapter_id = $1 WHERE pyq_id = $2",
+            chapter_id, pyq_id,
+        )
 
     async def link_pyq_chunk(
         self,
