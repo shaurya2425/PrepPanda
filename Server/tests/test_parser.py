@@ -41,6 +41,7 @@ CHAPTER_TITLE = "Sexual Reproduction in Flowering Plants"
 
 
 async def main() -> None:
+    global PDF_PATH
     load_dotenv()
 
     # ── Validate PDF ─────────────────────────────────────────────────
@@ -49,7 +50,6 @@ async def main() -> None:
         # Attempt to look in parent directory if run from tests/
         parent_pdf_path = os.path.join("..", PDF_PATH)
         if os.path.exists(parent_pdf_path):
-            global PDF_PATH
             PDF_PATH = parent_pdf_path
         else:
             return

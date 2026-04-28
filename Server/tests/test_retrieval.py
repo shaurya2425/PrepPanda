@@ -62,10 +62,10 @@ async def main() -> None:
         retriever = Retriever(pg=pg, embedder=embedder)
         
         logger.info("Initializing Generator...")
-        generator = Generator() # Requires GEMINI_API_KEY in env
+        generator = Generator()
 
         # ── 3. Run Query ────────────────────────────────────────────────
-        query = "Who was Panchanan Maheshwari, and what were his major contributions to botany and education?"
+        query = "Analyze how flowering plants ensure successful fertilisation despite non-motile gametes, integrating mechanisms of pollination, pollen-pistil interaction, and double fertilisation."
         
         logger.info(f"\n--- Running Query ---\nQuestion: {query}\n---------------------")
         
