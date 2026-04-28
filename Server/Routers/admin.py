@@ -8,8 +8,12 @@ POST /admin/books
     Create a new book entry.
 
 POST /admin/books/{book_id}/chapters
-    Upload a chapter PDF and run the full ingestion pipeline:
-    NodeParser → VisualParser → embeddings → S3 → Postgres.
+    Upload a single chapter PDF and run the full ingestion pipeline.
+
+POST /admin/ingest-book
+    One-shot: create a book and ingest all its chapters in a single
+    multipart request.  Chapter PDFs are matched to metadata via the
+    ``chapters`` JSON field (ordered list of ``{number, title}``).
 
 POST /admin/books/{book_id}/chapters/{chapter_id}/pyqs
     Bulk-ingest PYQ blocks. Accepts raw text in the block format::
@@ -38,7 +42,7 @@ import re
 import uuid
 from typing import Annotated, List, Optional
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile, status
 from pydantic import BaseModel, Field
 
 from Core.Parser.chapter_pipeline import ChapterPipeline
@@ -47,6 +51,9 @@ from Routers.deps import AdminDep, BucketDep, EmbedDep, PgDep
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+
+# Max multipart part size — 200 MB (Starlette default is 1 MB).
+_MAX_UPLOAD_BYTES = 200 * 1024 * 1024
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -230,7 +237,198 @@ async def create_book(
     return BookOut(**rec)
 
 
-# ── Chapters ─────────────────────────────────────────────────────────
+# ── Ingest Book (one-shot) ────────────────────────────────────────────
+
+class ChapterMeta(BaseModel):
+    """Metadata for one chapter inside an ingest-book request."""
+    number: int  = Field(..., ge=1, example=1)
+    title:  str  = Field(..., example="Reproduction in Organisms")
+
+
+class IngestBookChapterOut(BaseModel):
+    chapter_number: int
+    title:          str
+    chapter_id:     uuid.UUID
+    pdf_url:        Optional[str] = None
+    chunk_count:    int
+    image_count:    int
+    link_count:     int
+    embedded_count: int
+    error:          Optional[str] = None   # set if this chapter failed
+
+
+class IngestBookOut(BaseModel):
+    book_id:        uuid.UUID
+    title:          str
+    grade:          int
+    subject:        str
+    chapters:       List[IngestBookChapterOut]
+    total_chunks:   int
+    total_images:   int
+    failed_chapters: int
+
+
+@router.post(
+    "/ingest-book",
+    response_model=IngestBookOut,
+    status_code=status.HTTP_201_CREATED,
+    summary="One-shot: create book + ingest all chapters",
+)
+async def ingest_book(
+    request: Request,
+    pg: PgDep,
+    bucket: BucketDep,
+    embedder: EmbedDep,
+    _admin: AdminDep,
+) -> IngestBookOut:
+    """
+    **One-shot book ingestion.**
+
+    Creates a book record then runs the full pipeline for every chapter PDF
+    in a single request.  PDFs are processed sequentially; a failure in one
+    chapter is recorded but does **not** abort the remaining chapters.
+
+    ### Request (multipart/form-data)
+    | Field | Type | Description |
+    |-------|------|-------------|
+    | `title` | string | Book title |
+    | `grade` | integer | Grade level (1–12) |
+    | `subject` | string | Subject name |
+    | `chapters` | JSON string | Ordered array of `{number, title}` objects |
+    | `pdfs` | file[] | PDF files **in the same order** as `chapters` |
+
+    ### Chapter matching
+    `pdfs[0]` is ingested as `chapters[0]`, `pdfs[1]` as `chapters[1]`, etc.
+    The arrays must be the same length.
+    """
+    import json, tempfile, os
+
+    # ── Parse multipart with raised size limit (200 MB per part) ─────
+    form = await request.form(max_part_size=_MAX_UPLOAD_BYTES)
+
+    title   = form.get("title")
+    grade   = form.get("grade")
+    subject = form.get("subject")
+    chapters_raw = form.get("chapters")
+
+    if not all([title, grade, subject, chapters_raw]):
+        raise HTTPException(status_code=422, detail="Missing required fields: title, grade, subject, chapters")
+
+    try:
+        grade = int(grade)
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=422, detail="grade must be an integer")
+
+    # Collect PDF files (form fields named "pdfs")
+    pdfs: List[UploadFile] = [
+        v for k, v in form.multi_items()
+        if k == "pdfs" and hasattr(v, "read")
+    ]
+
+    # ── Parse chapters metadata ──────────────────────────────────────
+    try:
+        chapter_list = [ChapterMeta(**c) for c in json.loads(chapters_raw)]
+    except Exception as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Invalid chapters JSON: {exc}",
+        )
+
+    if len(chapter_list) != len(pdfs):
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"chapters has {len(chapter_list)} entries but "
+                f"{len(pdfs)} PDF files were uploaded. They must match."
+            ),
+        )
+
+    # ── Create book ──────────────────────────────────────────────────
+    book_rec = await pg.create_book(title=title, grade=grade, subject=subject)
+    book_id: uuid.UUID = book_rec["book_id"]
+    logger.info("Book created: '%s' (id=%s)", title, book_id)
+
+    # ── Ingest each chapter ──────────────────────────────────────────
+    pipeline = ChapterPipeline(pg=pg, bucket=bucket, embedder=embedder)
+    chapter_results: List[IngestBookChapterOut] = []
+    total_chunks = 0
+    total_images = 0
+    failed = 0
+
+    for meta, pdf_file in zip(chapter_list, pdfs):
+        logger.info(
+            "Ingesting chapter %d: %s …", meta.number, meta.title
+        )
+        pdf_bytes = await pdf_file.read()
+        suffix = os.path.splitext(pdf_file.filename or "chapter.pdf")[1] or ".pdf"
+
+        try:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+                tmp.write(pdf_bytes)
+                tmp_path = tmp.name
+
+            result = await pipeline.ingest(
+                pdf_path=tmp_path,
+                book_id=book_id,
+                chapter_number=meta.number,
+                chapter_title=meta.title,
+                pdf_bytes=pdf_bytes,
+            )
+            os.unlink(tmp_path)
+
+            chapter_results.append(IngestBookChapterOut(
+                chapter_number=meta.number,
+                title=meta.title,
+                chapter_id=result.chapter_id,
+                pdf_url=result.pdf_url,
+                chunk_count=result.chunk_count,
+                image_count=result.image_count,
+                link_count=result.link_count,
+                embedded_count=result.embedded_count,
+            ))
+            total_chunks += result.chunk_count
+            total_images += result.image_count
+
+        except Exception as exc:
+            logger.exception(
+                "Chapter %d (%s) ingestion failed: %s",
+                meta.number, meta.title, exc,
+            )
+            try:
+                os.unlink(tmp_path)
+            except Exception:
+                pass
+            chapter_results.append(IngestBookChapterOut(
+                chapter_number=meta.number,
+                title=meta.title,
+                chapter_id=uuid.UUID(int=0),
+                chunk_count=0,
+                image_count=0,
+                link_count=0,
+                embedded_count=0,
+                error=str(exc),
+            ))
+            failed += 1
+
+    await form.close()
+
+    logger.info(
+        "Book ingestion complete: %d chapters, %d chunks, %d images, %d failed",
+        len(chapter_list), total_chunks, total_images, failed,
+    )
+
+    return IngestBookOut(
+        book_id=book_id,
+        title=title,
+        grade=grade,
+        subject=subject,
+        chapters=chapter_results,
+        total_chunks=total_chunks,
+        total_images=total_images,
+        failed_chapters=failed,
+    )
+
+
 
 @router.post(
     "/books/{book_id}/chapters",
@@ -240,13 +438,11 @@ async def create_book(
 )
 async def ingest_chapter(
     book_id: uuid.UUID,
+    request: Request,
     pg: PgDep,
     bucket: BucketDep,
     embedder: EmbedDep,
     _admin: AdminDep,
-    chapter_number: Annotated[int, Form(...)] ,
-    chapter_title:  Annotated[str, Form(...)],
-    pdf: UploadFile = File(..., description="Chapter PDF file"),
 ) -> ChapterOut:
     """
     Upload a chapter PDF and run the full ingestion pipeline:
@@ -258,6 +454,8 @@ async def ingest_chapter(
 
     Returns counts for chunks, images, and chunk-image links.
     """
+    import tempfile, os
+
     # Validate book exists
     pool = pg._pool_guard()
     book_row = await pool.fetchrow(
@@ -266,8 +464,25 @@ async def ingest_chapter(
     if not book_row:
         raise HTTPException(status_code=404, detail=f"Book {book_id} not found.")
 
+    # ── Parse multipart with raised size limit ───────────────────────
+    form = await request.form(max_part_size=_MAX_UPLOAD_BYTES)
+
+    chapter_number = form.get("chapter_number")
+    chapter_title  = form.get("chapter_title")
+    pdf            = form.get("pdf")
+
+    if not chapter_number or not chapter_title or not pdf:
+        raise HTTPException(status_code=422, detail="Missing required fields: chapter_number, chapter_title, pdf")
+
+    try:
+        chapter_number = int(chapter_number)
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=422, detail="chapter_number must be an integer")
+
+    if not hasattr(pdf, "read"):
+        raise HTTPException(status_code=422, detail="pdf must be a file upload")
+
     # Save uploaded PDF to a temp path; also keep raw bytes for bucket upload
-    import tempfile, os, shutil
     suffix = os.path.splitext(pdf.filename or "chapter.pdf")[1] or ".pdf"
     pdf_bytes = await pdf.read()
     with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
@@ -288,6 +503,8 @@ async def ingest_chapter(
         raise HTTPException(status_code=500, detail=f"Ingestion failed: {exc}")
     finally:
         os.unlink(tmp_path)
+
+    await form.close()
 
     return ChapterOut(
         chapter_id=result.chapter_id,

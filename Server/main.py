@@ -99,7 +99,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
+# Multipart upload limit — 200 MB per part (default is 1 MB).
+# Handled via the `MaxUploadBody` dependency in Routers/deps.py.
 
 # ─────────────────────────────────────────────────────────────────────
 # Routers

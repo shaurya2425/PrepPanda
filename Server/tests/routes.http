@@ -322,3 +322,220 @@ Accept: application/json
 ### 7.2  Flat list — chapter not found (expect 404)
 GET {{base}}/mindmap/00000000-0000-0000-0000-000000000000/flat
 Accept: application/json
+
+
+# ═════════════════════════════════════════════════════════════════════
+# 8 ── INGEST BOOK  — NCERT Biology Class 12 (one-shot, all 13 chapters)
+#
+# PDFs are in tests/Material/.  This sends all 13 lebo1xx.pdf files in
+# a single multipart request.  The server creates the book record then
+# runs NodeParser → VisualParser → Embedder → S3 for each chapter.
+#
+# This will take several minutes.  Watch server logs for per-chapter
+# progress.  Copy the returned book_id into @bio12_book_id below, and
+# any chapter_id you want to query into @bio12_chapter_id.
+#
+# ⚠  Raw PDFs (each up to ~65 MB) are uploaded to the bucket.
+# ═════════════════════════════════════════════════════════════════════
+
+@bio12_book_id    = FILL_AFTER_§8   # paste from §8.1 response → book_id
+@bio12_chapter_id = FILL_AFTER_§8   # paste any chapter_id from §8.1 response
+
+### 8.1  Ingest all 13 chapters of NCERT Biology Class 12
+###      File paths are relative to this .http file (tests/).
+###      VS Code REST Client resolves them relative to the workspace root;
+###      adjust the prefix if needed (e.g. Server/tests/Material/...).
+# @name ingest_bio12
+POST {{base}}/admin/ingest-book
+X-Admin-Key: {{admin_key}}
+Content-Type: multipart/form-data; boundary=----Bio12Boundary
+
+------Bio12Boundary
+Content-Disposition: form-data; name="title"
+
+Biology Part I & II – Class XII
+------Bio12Boundary
+Content-Disposition: form-data; name="grade"
+
+12
+------Bio12Boundary
+Content-Disposition: form-data; name="subject"
+
+biology
+------Bio12Boundary
+Content-Disposition: form-data; name="chapters"
+
+[
+  {"number": 1,  "title": "Reproduction in Organisms"},
+  {"number": 2,  "title": "Sexual Reproduction in Flowering Plants"},
+  {"number": 3,  "title": "Human Reproduction"},
+  {"number": 4,  "title": "Reproductive Health"},
+  {"number": 5,  "title": "Principles of Inheritance and Variation"},
+  {"number": 6,  "title": "Molecular Basis of Inheritance"},
+  {"number": 7,  "title": "Evolution"},
+  {"number": 8,  "title": "Human Health and Disease"},
+  {"number": 9,  "title": "Strategies for Enhancement in Food Production"},
+  {"number": 10, "title": "Microbes in Human Welfare"},
+  {"number": 11, "title": "Biotechnology: Principles and Processes"},
+  {"number": 12, "title": "Biotechnology and Its Applications"},
+  {"number": 13, "title": "Organisms and Populations"}
+]
+------Bio12Boundary
+Content-Disposition: form-data; name="pdfs"; filename="lebo101.pdf"
+Content-Type: application/pdf
+
+< ./Material/lebo101.pdf
+------Bio12Boundary
+Content-Disposition: form-data; name="pdfs"; filename="lebo102.pdf"
+Content-Type: application/pdf
+
+< ./Material/lebo102.pdf
+------Bio12Boundary
+Content-Disposition: form-data; name="pdfs"; filename="lebo103.pdf"
+Content-Type: application/pdf
+
+< ./Material/lebo103.pdf
+------Bio12Boundary
+Content-Disposition: form-data; name="pdfs"; filename="lebo104.pdf"
+Content-Type: application/pdf
+
+< ./Material/lebo104.pdf
+------Bio12Boundary
+Content-Disposition: form-data; name="pdfs"; filename="lebo105.pdf"
+Content-Type: application/pdf
+
+< ./Material/lebo105.pdf
+------Bio12Boundary
+Content-Disposition: form-data; name="pdfs"; filename="lebo106.pdf"
+Content-Type: application/pdf
+
+< ./Material/lebo106.pdf
+------Bio12Boundary
+Content-Disposition: form-data; name="pdfs"; filename="lebo107.pdf"
+Content-Type: application/pdf
+
+< ./Material/lebo107.pdf
+------Bio12Boundary
+Content-Disposition: form-data; name="pdfs"; filename="lebo108.pdf"
+Content-Type: application/pdf
+
+< ./Material/lebo108.pdf
+------Bio12Boundary
+Content-Disposition: form-data; name="pdfs"; filename="lebo109.pdf"
+Content-Type: application/pdf
+
+< ./Material/lebo109.pdf
+------Bio12Boundary
+Content-Disposition: form-data; name="pdfs"; filename="lebo110.pdf"
+Content-Type: application/pdf
+
+< ./Material/lebo110.pdf
+------Bio12Boundary
+Content-Disposition: form-data; name="pdfs"; filename="lebo111.pdf"
+Content-Type: application/pdf
+
+< ./Material/lebo111.pdf
+------Bio12Boundary
+Content-Disposition: form-data; name="pdfs"; filename="lebo112.pdf"
+Content-Type: application/pdf
+
+< ./Material/lebo112.pdf
+------Bio12Boundary
+Content-Disposition: form-data; name="pdfs"; filename="lebo113.pdf"
+Content-Type: application/pdf
+
+< ./Material/lebo113.pdf
+------Bio12Boundary--
+
+
+### 8.2  Ingest book — mismatched PDF count (expect 422)
+POST {{base}}/admin/ingest-book
+X-Admin-Key: {{admin_key}}
+Content-Type: multipart/form-data; boundary=----MismatchBoundary
+
+------MismatchBoundary
+Content-Disposition: form-data; name="title"
+
+Mismatch Test Book
+------MismatchBoundary
+Content-Disposition: form-data; name="grade"
+
+12
+------MismatchBoundary
+Content-Disposition: form-data; name="subject"
+
+biology
+------MismatchBoundary
+Content-Disposition: form-data; name="chapters"
+
+[{"number":1,"title":"Chapter One"},{"number":2,"title":"Chapter Two"}]
+------MismatchBoundary
+Content-Disposition: form-data; name="pdfs"; filename="lebo101.pdf"
+Content-Type: application/pdf
+
+< ./Material/lebo101.pdf
+------MismatchBoundary--
+
+
+### 8.3  Ingest book — invalid chapters JSON (expect 422)
+POST {{base}}/admin/ingest-book
+X-Admin-Key: {{admin_key}}
+Content-Type: multipart/form-data; boundary=----BadJsonBoundary
+
+------BadJsonBoundary
+Content-Disposition: form-data; name="title"
+
+Bad JSON Test
+------BadJsonBoundary
+Content-Disposition: form-data; name="grade"
+
+12
+------BadJsonBoundary
+Content-Disposition: form-data; name="subject"
+
+biology
+------BadJsonBoundary
+Content-Disposition: form-data; name="chapters"
+
+not valid json at all
+------BadJsonBoundary
+Content-Disposition: form-data; name="pdfs"; filename="lebo101.pdf"
+Content-Type: application/pdf
+
+< ./Material/lebo101.pdf
+------BadJsonBoundary--
+
+
+# ═════════════════════════════════════════════════════════════════════
+# 9 ── POST-INGEST SMOKE TESTS  (fill @bio12_chapter_id first)
+# ═════════════════════════════════════════════════════════════════════
+
+### 9.1  SRS — ask about Ch.1 (Reproduction in Organisms)
+POST {{base}}/srs/ask
+Content-Type: application/json
+
+{
+  "question":   "What are the different modes of asexual reproduction found in animals? Give two examples for each.",
+  "chapter_id": "{{bio12_chapter_id}}"
+}
+
+
+### 9.2  SRS — ask about genetics
+POST {{base}}/srs/ask
+Content-Type: application/json
+
+{
+  "question":   "Explain Mendel's law of segregation with an example.",
+  "chapter_id": "{{bio12_chapter_id}}"
+}
+
+
+### 9.3  MindMap — nested tree for the ingested chapter
+# @name bio12_mindmap
+GET {{base}}/mindmap/{{bio12_chapter_id}}
+Accept: application/json
+
+
+### 9.4  MindMap — flat node list (React-Flow format)
+GET {{base}}/mindmap/{{bio12_chapter_id}}/flat
+Accept: application/json
