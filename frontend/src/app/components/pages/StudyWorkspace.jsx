@@ -1,12 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { Brain, ArrowLeft, FileText, MessageSquare, BookOpen, GitBranch, ClipboardCheck } from "lucide-react";
+import { Brain, ArrowLeft, FileText, MessageSquare, BookOpen, GitBranch, ClipboardCheck, FileQuestion, Loader2 } from "lucide-react";
 import { ThemeToggle } from "../ui/ThemeToggle";
 import { PDFTab } from "../tabs/PDFTab";
 import { ChatTab } from "../tabs/ChatTab";
 import { NotesTab } from "../tabs/NotesTab";
 import { MindmapTab } from "../tabs/MindmapTab";
 import { QuizTab } from "../tabs/QuizTab";
+import { PYQTab } from "../tabs/PYQTab";
+import { api } from "@/lib/api";
 
 const tabs = [
   { id: 'pdf', label: 'PDF', icon: FileText },
@@ -14,6 +16,7 @@ const tabs = [
   { id: 'notes', label: 'Notes', icon: BookOpen },
   { id: 'mindmap', label: 'Mindmap', icon: GitBranch },
   { id: 'quiz', label: 'Quiz', icon: ClipboardCheck },
+  { id: 'pyq', label: 'PYQ', icon: FileQuestion },
 ];
 
 export function StudyWorkspace() {
@@ -21,16 +24,27 @@ export function StudyWorkspace() {
   const navigate = useNavigate();
   const { chapterId } = useParams();
 
-  const mockChapters = {
-    '1': { title: 'Chemical Reactions and Equations', meta: 'Class 10 · Chemistry · Chapter 1' },
-    '2': { title: 'Acids, Bases and Salts', meta: 'Class 10 · Chemistry · Chapter 2' },
-    '3': { title: 'Metals and Non-metals', meta: 'Class 10 · Chemistry · Chapter 3' },
-    '4': { title: 'Carbon and its Compounds', meta: 'Class 10 · Chemistry · Chapter 4' },
-    '5': { title: 'Periodic Classification of Elements', meta: 'Class 10 · Chemistry · Chapter 5' },
-    '6': { title: 'Life Processes', meta: 'Class 10 · Biology · Chapter 6' },
-  };
+  const [chapter, setChapter] = useState(null);
+  const [book, setBook] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const chapterInfo = mockChapters[chapterId] || { title: `Chapter ${chapterId}`, meta: `Class 10 · Subject · Chapter ${chapterId}` };
+  useEffect(() => {
+    const fetchChapterAndBook = async () => {
+      try {
+        const chapterData = await api.catalog.getChapter(chapterId);
+        setChapter(chapterData);
+        if (chapterData?.book_id) {
+          const bookData = await api.catalog.getBook(chapterData.book_id);
+          setBook(bookData);
+        }
+      } catch (err) {
+        console.error("Failed to fetch chapter/book info:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchChapterAndBook();
+  }, [chapterId]);
 
   return (
     <div className="h-screen flex flex-col" style={{ background: 'var(--bg-primary)' }}>
@@ -47,12 +61,21 @@ export function StudyWorkspace() {
               <ArrowLeft className="w-4 h-4" style={{ color: 'var(--text-primary)' }} />
             </button>
             <div>
-              <div className="font-bold text-[16px]" style={{ color: 'var(--text-primary)' }}>
-                {chapterInfo.title}
-              </div>
-              <div className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>
-                {chapterInfo.meta}
-              </div>
+              {isLoading ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin text-muted" />
+                  <span className="text-sm text-muted">Loading chapter...</span>
+                </div>
+              ) : (
+                <>
+                  <div className="font-bold text-[16px]" style={{ color: 'var(--text-primary)' }}>
+                    {chapter?.title || `Chapter ${chapterId}`}
+                  </div>
+                  <div className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>
+                    {book ? `Class ${book.grade} · ${book.subject} · Chapter ${chapter?.chapter_number}` : 'Unknown Book'}
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
@@ -67,13 +90,13 @@ export function StudyWorkspace() {
 
         {/* Tabs */}
         <div className="flex items-center justify-center border-t px-4" style={{ borderColor: 'var(--border)' }}>
-          <div className="flex items-center gap-1 py-1.5">
+          <div className="flex items-center gap-1 py-1.5 overflow-x-auto no-scrollbar max-w-full">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
               return (
                 <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                  className="px-6 py-2.5 rounded-xl flex items-center gap-2 transition-all duration-200 relative"
+                  className="px-6 py-2.5 rounded-xl flex items-center gap-2 transition-all duration-200 relative whitespace-nowrap"
                   style={{
                     backgroundColor: isActive ? 'var(--accent-glow)' : 'transparent',
                     color: isActive ? 'var(--accent-primary)' : 'var(--text-muted)',
@@ -93,11 +116,12 @@ export function StudyWorkspace() {
 
       {/* Content */}
       <div className="flex-1 overflow-hidden">
-        {activeTab === 'pdf' && <PDFTab title={chapterInfo.title} />}
-        {activeTab === 'chat' && <ChatTab title={chapterInfo.title} chapterId={chapterId} />}
-        {activeTab === 'notes' && <NotesTab title={chapterInfo.title} chapterId={chapterId} />}
-        {activeTab === 'mindmap' && <MindmapTab title={chapterInfo.title} chapterId={chapterId} />}
-        {activeTab === 'quiz' && <QuizTab title={chapterInfo.title} chapterId={chapterId} />}
+        {activeTab === 'pdf' && <PDFTab title={chapter?.title} chapterId={chapterId} />}
+        {activeTab === 'chat' && <ChatTab title={chapter?.title} chapterId={chapterId} />}
+        {activeTab === 'notes' && <NotesTab title={chapter?.title} chapterId={chapterId} />}
+        {activeTab === 'mindmap' && <MindmapTab title={chapter?.title} chapterId={chapterId} />}
+        {activeTab === 'quiz' && <QuizTab title={chapter?.title} chapterId={chapterId} />}
+        {activeTab === 'pyq' && <PYQTab title={chapter?.title} chapterId={chapterId} />}
       </div>
     </div>
   );

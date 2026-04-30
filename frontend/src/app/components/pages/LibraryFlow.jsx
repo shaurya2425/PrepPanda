@@ -1,50 +1,100 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate } from "react-router";
-import { Brain, ArrowLeft, ChevronRight, BookOpen } from "lucide-react";
+import { Brain, ArrowLeft, ChevronRight, BookOpen, Loader2 } from "lucide-react";
 import { ThemeToggle } from "../ui/ThemeToggle";
+import { api } from "@/lib/api";
 
-const classes = [
-  { id: '9', name: 'Class 9', icon: '9️⃣', desc: '4 subjects' },
-  { id: '10', name: 'Class 10', icon: '🔟', desc: '4 subjects' },
-  { id: '11', name: 'Class 11', icon: '1️⃣1️⃣', desc: '4 subjects' },
-  { id: '12', name: 'Class 12', icon: '1️⃣2️⃣', desc: '4 subjects' },
-];
+const getSubjectIcon = (subject) => {
+  const s = subject.toLowerCase();
+  if (s.includes('physics')) return '⚛️';
+  if (s.includes('chemistry')) return '🧪';
+  if (s.includes('biology')) return '🧬';
+  if (s.includes('math')) return '📐';
+  return '📚';
+};
 
-const subjects = [
-  { id: 'physics', name: 'Physics', icon: '⚛️', color: '#3B82F6', chapters: '15 chapters' },
-  { id: 'chemistry', name: 'Chemistry', icon: '🧪', color: '#22D3EE', chapters: '16 chapters' },
-  { id: 'biology', name: 'Biology', icon: '🧬', color: '#10B981', chapters: '13 chapters' },
-  { id: 'mathematics', name: 'Mathematics', icon: '📐', color: '#F59E0B', chapters: '14 chapters' },
-];
-
-const chapters = [
-  { id: '1', name: 'Chemical Reactions and Equations', progress: 65 },
-  { id: '2', name: 'Acids, Bases and Salts', progress: 0 },
-  { id: '3', name: 'Metals and Non-metals', progress: 30 },
-  { id: '4', name: 'Carbon and its Compounds', progress: 0 },
-  { id: '5', name: 'Periodic Classification of Elements', progress: 0 },
-  { id: '6', name: 'Life Processes', progress: 0 },
-];
+const getSubjectColor = (subject) => {
+  const s = subject.toLowerCase();
+  if (s.includes('physics')) return '#3B82F6';
+  if (s.includes('chemistry')) return '#22D3EE';
+  if (s.includes('biology')) return '#10B981';
+  if (s.includes('math')) return '#F59E0B';
+  return '#8B5CF6';
+};
 
 export function LibraryFlow() {
   const navigate = useNavigate();
   const [step, setStep] = useState('class');
-  const [selectedClass, setSelectedClass] = useState('');
-  const [selectedSubject, setSelectedSubject] = useState('');
+  
+  const [books, setBooks] = useState([]);
+  const [isLoadingBooks, setIsLoadingBooks] = useState(true);
+  
+  const [chapters, setChapters] = useState([]);
+  const [isLoadingChapters, setIsLoadingChapters] = useState(false);
 
-  const handleClassSelect = (classId) => {
-    setSelectedClass(classId);
+  const [selectedGrade, setSelectedGrade] = useState(null);
+  const [selectedBook, setSelectedBook] = useState(null);
+
+  useEffect(() => {
+    const fetchBooks = async () => {
+      try {
+        const data = await api.catalog.listBooks();
+        setBooks(data);
+      } catch (err) {
+        console.error("Failed to fetch books:", err);
+      } finally {
+        setIsLoadingBooks(false);
+      }
+    };
+    fetchBooks();
+  }, []);
+
+  const uniqueGrades = useMemo(() => {
+    const grades = [...new Set(books.map(b => b.grade))].sort((a, b) => a - b);
+    return grades.map(g => ({
+      id: g,
+      name: `Class ${g}`,
+      icon: `${g}️⃣`,
+      desc: `${books.filter(b => b.grade === g).length} subjects`
+    }));
+  }, [books]);
+
+  const subjectsForGrade = useMemo(() => {
+    if (!selectedGrade) return [];
+    return books.filter(b => b.grade === selectedGrade).map(b => ({
+      id: b.book_id,
+      name: b.subject.charAt(0).toUpperCase() + b.subject.slice(1),
+      title: b.title,
+      icon: getSubjectIcon(b.subject),
+      color: getSubjectColor(b.subject),
+      chapters: `${b.chapter_count} chapters`
+    }));
+  }, [books, selectedGrade]);
+
+  const handleClassSelect = (gradeId) => {
+    setSelectedGrade(gradeId);
     setStep('subject');
   };
 
-  const handleSubjectSelect = (subjectId) => {
-    setSelectedSubject(subjectId);
+  const handleSubjectSelect = async (bookId) => {
+    const book = books.find(b => b.book_id === bookId);
+    setSelectedBook(book);
     setStep('chapter');
+    
+    setIsLoadingChapters(true);
+    try {
+      const data = await api.catalog.listChapters(bookId);
+      setChapters(data);
+    } catch (err) {
+      console.error("Failed to fetch chapters:", err);
+    } finally {
+      setIsLoadingChapters(false);
+    }
   };
 
   const handleBack = () => {
-    if (step === 'subject') { setStep('class'); setSelectedClass(''); }
-    else if (step === 'chapter') { setStep('subject'); setSelectedSubject(''); }
+    if (step === 'subject') { setStep('class'); setSelectedGrade(null); }
+    else if (step === 'chapter') { setStep('subject'); setSelectedBook(null); setChapters([]); }
   };
 
   return (
@@ -78,24 +128,24 @@ export function LibraryFlow() {
           <div className="hidden md:flex items-center gap-2 text-[15px] font-medium" style={{ color: 'var(--text-muted)' }}>
             <span className={step === 'class' ? 'font-bold' : 'cursor-pointer hover:opacity-80'} 
               style={{ color: step === 'class' ? 'var(--accent-primary)' : 'var(--text-muted)' }}
-              onClick={() => { setStep('class'); setSelectedClass(''); setSelectedSubject(''); }}>
+              onClick={() => { setStep('class'); setSelectedGrade(null); setSelectedBook(null); }}>
               Class
             </span>
-            {selectedClass && (
+            {selectedGrade && (
               <>
                 <ChevronRight className="w-4 h-4" />
                 <span className={step === 'subject' ? 'font-bold' : 'cursor-pointer hover:opacity-80'}
                   style={{ color: step === 'subject' ? 'var(--accent-primary)' : 'var(--text-muted)' }}
-                  onClick={() => { setStep('subject'); setSelectedSubject(''); }}>
-                  Class {selectedClass}
+                  onClick={() => { setStep('subject'); setSelectedBook(null); }}>
+                  Class {selectedGrade}
                 </span>
               </>
             )}
-            {selectedSubject && (
+            {selectedBook && (
               <>
                 <ChevronRight className="w-4 h-4" />
                 <span className="font-bold" style={{ color: 'var(--accent-primary)' }}>
-                  Chemistry
+                  {selectedBook.subject.charAt(0).toUpperCase() + selectedBook.subject.slice(1)}
                 </span>
               </>
             )}
@@ -125,22 +175,32 @@ export function LibraryFlow() {
               </p>
             </div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-              {classes.map((cls) => (
-                <button
-                  key={cls.id}
-                  onClick={() => handleClassSelect(cls.id)}
-                  className="group p-10 rounded-3xl border text-center transition-all duration-300 hover:scale-[1.03] active:scale-[0.98]"
-                  style={{ background: 'var(--gradient-card)', borderColor: 'var(--border)', boxShadow: 'var(--shadow-sm)' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.boxShadow = 'var(--shadow-glow)'; e.currentTarget.style.borderColor = 'var(--accent-primary)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'var(--shadow-sm)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
-                >
-                  <div className="text-6xl mb-5 transition-transform duration-300 group-hover:scale-110">{cls.icon}</div>
-                  <div className="text-2xl font-extrabold mb-1" style={{ color: 'var(--text-primary)' }}>{cls.name}</div>
-                  <div className="text-[17px] font-medium" style={{ color: 'var(--text-muted)' }}>{cls.desc}</div>
-                </button>
-              ))}
-            </div>
+            {isLoadingBooks ? (
+              <div className="flex items-center justify-center py-20">
+                <Loader2 className="w-10 h-10 animate-spin" style={{ color: 'var(--accent-primary)' }} />
+              </div>
+            ) : uniqueGrades.length === 0 ? (
+              <div className="text-center py-20">
+                <p className="text-xl" style={{ color: 'var(--text-muted)' }}>No classes available yet.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+                {uniqueGrades.map((cls) => (
+                  <button
+                    key={cls.id}
+                    onClick={() => handleClassSelect(cls.id)}
+                    className="group p-10 rounded-3xl border text-center transition-all duration-300 hover:scale-[1.03] active:scale-[0.98]"
+                    style={{ background: 'var(--gradient-card)', borderColor: 'var(--border)', boxShadow: 'var(--shadow-sm)' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.boxShadow = 'var(--shadow-glow)'; e.currentTarget.style.borderColor = 'var(--accent-primary)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'var(--shadow-sm)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
+                  >
+                    <div className="text-6xl mb-5 transition-transform duration-300 group-hover:scale-110">{cls.icon}</div>
+                    <div className="text-2xl font-extrabold mb-1" style={{ color: 'var(--text-primary)' }}>{cls.name}</div>
+                    <div className="text-[17px] font-medium" style={{ color: 'var(--text-muted)' }}>{cls.desc}</div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -152,12 +212,12 @@ export function LibraryFlow() {
                 Choose a <span className="gradient-text">subject</span>
               </h1>
               <p className="text-xl" style={{ color: 'var(--text-secondary)' }}>
-                Class {selectedClass} · Select your subject to explore chapters
+                Class {selectedGrade} · Select your subject to explore chapters
               </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {subjects.map((subject) => (
+              {subjectsForGrade.map((subject) => (
                 <button
                   key={subject.id}
                   onClick={() => handleSubjectSelect(subject.id)}
@@ -174,6 +234,7 @@ export function LibraryFlow() {
                     <div className="text-2xl font-extrabold mb-1" style={{ color: 'var(--text-primary)' }}>
                       {subject.name}
                     </div>
+                    <div className="text-[14px] font-medium opacity-70 mb-1" style={{ color: 'var(--text-secondary)' }}>{subject.title}</div>
                     <div className="text-[18px] font-medium" style={{ color: 'var(--text-muted)' }}>{subject.chapters}</div>
                   </div>
                   <ChevronRight className="w-6 h-6 transition-transform duration-200 group-hover:translate-x-1" style={{ color: 'var(--text-muted)' }} />
@@ -184,14 +245,14 @@ export function LibraryFlow() {
         )}
 
         {/* Chapter Selection */}
-        {step === 'chapter' && (
+        {step === 'chapter' && selectedBook && (
           <div className="animate-fade-up">
             <div className="mb-10">
               <h1 className="text-5xl lg:text-6xl font-extrabold mb-4 tracking-tight" style={{ color: 'var(--text-primary)' }}>
-                <span className="gradient-text">Chemistry</span> Chapters
+                <span className="gradient-text">{selectedBook.subject.charAt(0).toUpperCase() + selectedBook.subject.slice(1)}</span> Chapters
               </h1>
               <p className="text-xl" style={{ color: 'var(--text-secondary)' }}>
-                Class {selectedClass} · Select a chapter to start learning
+                Class {selectedGrade} · {selectedBook.title}
               </p>
             </div>
 
@@ -206,53 +267,55 @@ export function LibraryFlow() {
                   </div>
                   <div>
                     <div className="text-2xl font-extrabold text-white mb-1">Prepare Full Subject</div>
-                    <div className="text-[18px] text-white/80 font-medium">Get a complete AI-driven study plan for Chemistry</div>
+                    <div className="text-[18px] text-white/80 font-medium">Get a complete AI-driven study plan for {selectedBook.subject}</div>
                   </div>
                 </div>
               </button>
             </div>
 
             {/* Chapter List */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              {chapters.map((chapter) => (
-                <Link
-                  key={chapter.id}
-                  to={`/study/${chapter.id}`}
-                  className="group p-7 rounded-3xl border transition-all duration-200 hover:scale-[1.01]"
-                  style={{ background: 'var(--gradient-card)', borderColor: 'var(--border)', boxShadow: 'var(--shadow-sm)' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--accent-primary)'; e.currentTarget.style.boxShadow = 'var(--shadow-md)'; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.boxShadow = 'var(--shadow-sm)'; }}
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1">
-                      <div className="text-xs font-bold mb-2 px-2.5 py-1 rounded-lg inline-block" style={{
-                        background: 'var(--accent-glow)', color: 'var(--accent-primary)',
-                      }}>
-                        Chapter {chapter.id}
+            {isLoadingChapters ? (
+              <div className="flex items-center justify-center py-20">
+                <Loader2 className="w-10 h-10 animate-spin" style={{ color: 'var(--accent-primary)' }} />
+              </div>
+            ) : chapters.length === 0 ? (
+              <div className="text-center py-20">
+                <p className="text-xl" style={{ color: 'var(--text-muted)' }}>No chapters ingested yet.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {chapters.map((chapter) => (
+                  <Link
+                    key={chapter.chapter_id}
+                    to={`/study/${chapter.chapter_id}`}
+                    className="group p-7 rounded-3xl border transition-all duration-200 hover:scale-[1.01]"
+                    style={{ background: 'var(--gradient-card)', borderColor: 'var(--border)', boxShadow: 'var(--shadow-sm)' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--accent-primary)'; e.currentTarget.style.boxShadow = 'var(--shadow-md)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.boxShadow = 'var(--shadow-sm)'; }}
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <div className="text-xs font-bold mb-2 px-2.5 py-1 rounded-lg inline-block" style={{
+                          background: 'var(--accent-glow)', color: 'var(--accent-primary)',
+                        }}>
+                          Chapter {chapter.chapter_number}
+                        </div>
+                        <h3 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
+                          {chapter.title}
+                        </h3>
                       </div>
-                      <h3 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
-                        {chapter.name}
-                      </h3>
+                      <ChevronRight className="w-5 h-5 flex-shrink-0 mt-1 transition-transform duration-200 group-hover:translate-x-1" style={{ color: 'var(--text-muted)' }} />
                     </div>
-                    <ChevronRight className="w-5 h-5 flex-shrink-0 mt-1 transition-transform duration-200 group-hover:translate-x-1" style={{ color: 'var(--text-muted)' }} />
-                  </div>
 
-                  {chapter.progress > 0 ? (
-                    <div>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-base font-medium" style={{ color: 'var(--text-muted)' }}>Progress</span>
-                        <span className="text-base font-bold" style={{ color: 'var(--accent-primary)' }}>{chapter.progress}%</span>
-                      </div>
-                      <div className="h-2 rounded-full overflow-hidden" style={{ background: 'var(--bg-tertiary)' }}>
-                        <div className="h-full rounded-full" style={{ background: 'var(--gradient-primary)', width: `${chapter.progress}%` }} />
-                      </div>
+                    <div className="flex gap-4 mt-4">
+                       <span className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>{chapter.chunk_count} chunks</span>
+                       <span className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>{chapter.image_count} images</span>
+                       <span className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>{chapter.pyq_count} PYQs</span>
                     </div>
-                  ) : (
-                    <div className="text-base font-medium" style={{ color: 'var(--text-muted)' }}>Not started yet</div>
-                  )}
-                </Link>
-              ))}
-            </div>
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
