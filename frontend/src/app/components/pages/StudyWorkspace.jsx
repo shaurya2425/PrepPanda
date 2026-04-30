@@ -3,7 +3,6 @@ import { Link, useNavigate, useParams } from "react-router";
 import { Brain, ArrowLeft, FileText, MessageSquare, BookOpen, GitBranch, ClipboardCheck, FileQuestion, Loader2 } from "lucide-react";
 import { ThemeToggle } from "../ui/ThemeToggle";
 import { PDFTab } from "../tabs/PDFTab";
-import { ChatTab } from "../tabs/ChatTab";
 import { NotesTab } from "../tabs/NotesTab";
 import { MindmapTab } from "../tabs/MindmapTab";
 import { QuizTab } from "../tabs/QuizTab";
@@ -11,8 +10,7 @@ import { PYQTab } from "../tabs/PYQTab";
 import { api } from "@/lib/api";
 
 const tabs = [
-  { id: 'pdf', label: 'PDF', icon: FileText },
-  { id: 'chat', label: 'Chat', icon: MessageSquare },
+  { id: 'pdf', label: 'PDF & Chat', icon: FileText },
   { id: 'notes', label: 'Notes', icon: BookOpen },
   { id: 'mindmap', label: 'Mindmap', icon: GitBranch },
   { id: 'quiz', label: 'Quiz', icon: ClipboardCheck },
@@ -20,7 +18,7 @@ const tabs = [
 ];
 
 export function StudyWorkspace() {
-  const [activeTab, setActiveTab] = useState('chat');
+  const [activeTab, setActiveTab] = useState('pdf');
   const navigate = useNavigate();
   const { chapterId } = useParams();
 
@@ -116,8 +114,7 @@ export function StudyWorkspace() {
 
       {/* Content */}
       <div className="flex-1 overflow-hidden">
-        {activeTab === 'pdf' && <PDFTab title={chapter?.title} chapterId={chapterId} />}
-        {activeTab === 'chat' && <ChatTab title={chapter?.title} chapterId={chapterId} />}
+        {activeTab === 'pdf' && <PDFTab title={chapter?.title} chapterId={chapterId} pdfUrl={chapter?.pdf_url} />}
         {activeTab === 'notes' && <NotesTab title={chapter?.title} chapterId={chapterId} />}
         {activeTab === 'mindmap' && <MindmapTab title={chapter?.title} chapterId={chapterId} />}
         {activeTab === 'quiz' && <QuizTab title={chapter?.title} chapterId={chapterId} />}

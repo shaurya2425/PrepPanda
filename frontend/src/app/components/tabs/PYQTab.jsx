@@ -49,9 +49,18 @@ export function PYQTab({ title, chapterId }) {
           <FileQuestion className="w-10 h-10" style={{ color: 'var(--text-muted)' }} />
         </div>
         <h2 className="text-2xl font-bold mb-3" style={{ color: 'var(--text-primary)' }}>No PYQs Found</h2>
-        <p className="text-[17px] text-muted max-w-md" style={{ color: 'var(--text-secondary)' }}>
+        <p className="text-[17px] text-muted max-w-md mb-6" style={{ color: 'var(--text-secondary)' }}>
           There are no previous year questions mapped to this chapter yet.
         </p>
+        
+        <div className="p-5 rounded-2xl border glass text-left max-w-md" style={{ borderColor: 'var(--border)', background: 'rgba(124, 58, 237, 0.05)' }}>
+          <div className="flex items-center gap-2 font-bold mb-2 text-violet-600 dark:text-violet-400">
+            <Sparkles className="w-4 h-4" /> Unlock AI Insights
+          </div>
+          <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+            Once you add previous year questions, PrepPanda's AI will automatically analyze them to detect <strong>Topic Trends</strong> and generate high-confidence <strong>Predicted Exam Questions</strong>.
+          </div>
+        </div>
       </div>
     );
   }

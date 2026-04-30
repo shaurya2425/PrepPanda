@@ -30,9 +30,10 @@ import uuid
 from typing import List, Optional
 
 from fastapi import APIRouter, HTTPException, Query
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from Routers.deps import PgDep
+from Routers.deps import PgDep, BucketDep
 
 logger = logging.getLogger(__name__)
 
@@ -188,6 +189,88 @@ async def get_chapter(
         raise HTTPException(status_code=404, detail=f"Chapter {chapter_id} not found.")
     return ChapterDetail(**ch)
 
+
+@router.get(
+    "/chapters/{chapter_id}/pdf",
+    summary="Get chapter PDF stream",
+)
+async def get_chapter_pdf(
+    chapter_id: uuid.UUID,
+    pg: PgDep,
+    bucket: BucketDep,
+):
+    """Stream the raw PDF file for a chapter from S3."""
+    ch = await pg.get_chapter(chapter_id)
+    if not ch:
+        raise HTTPException(status_code=404, detail=f"Chapter {chapter_id} not found.")
+
+    pdf_url = ch.get("pdf_url")
+    if not pdf_url:
+        raise HTTPException(status_code=404, detail="No PDF associated with this chapter.")
+
+    import asyncio
+
+    def fetch_stream():
+        return bucket.get_file_stream(pdf_url)
+
+    try:
+        body, content_type = await asyncio.to_thread(fetch_stream)
+
+        # boto3 StreamingBody needs to be wrapped in a generator for FastAPI
+        def iterfile():
+            try:
+                for chunk in body.iter_chunks(chunk_size=1024 * 64):
+                    yield chunk
+            finally:
+                body.close()
+
+        return StreamingResponse(
+            iterfile(),
+            media_type=content_type,
+            headers={
+                "Content-Disposition": f'inline; filename="chapter_{ch["chapter_number"]}.pdf"',
+                "Cache-Control": "public, max-age=86400"
+            }
+        )
+    except Exception as exc:
+        logger.error("Failed to stream PDF for chapter %s: %s", chapter_id, exc)
+        raise HTTPException(status_code=500, detail="Failed to fetch PDF from storage")
+
+
+@router.get(
+    "/media",
+    summary="Generic media proxy",
+)
+async def get_media(
+    url: str = Query(..., description="The S3 URL to proxy"),
+    bucket: BucketDep = None,
+):
+    """Proxy generic media URLs (like images) to bypass direct S3 browser requests."""
+    import asyncio
+
+    def fetch_stream():
+        return bucket.get_file_stream(url)
+
+    try:
+        body, content_type = await asyncio.to_thread(fetch_stream)
+
+        def iterfile():
+            try:
+                for chunk in body.iter_chunks(chunk_size=1024 * 64):
+                    yield chunk
+            finally:
+                body.close()
+
+        return StreamingResponse(
+            iterfile(),
+            media_type=content_type,
+            headers={
+                "Cache-Control": "public, max-age=86400"
+            }
+        )
+    except Exception as exc:
+        logger.error("Failed to proxy media %s: %s", url, exc)
+        raise HTTPException(status_code=500, detail="Failed to fetch media")
 
 # ── PYQs ─────────────────────────────────────────────────────────────
 

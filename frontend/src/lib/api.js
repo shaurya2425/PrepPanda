@@ -248,6 +248,28 @@ const catalog = {
   listChapterPyqs(chapterId, filters = {}) {
     return request(`/catalog/chapters/${chapterId}/pyqs${qs(filters)}`);
   },
+
+  /**
+   * Get the full URL to stream the chapter PDF.
+   *
+   * @param {string} chapterId
+   * @returns {string} The full URL string
+   */
+  getChapterPdfUrl(chapterId) {
+    return `${BASE_URL}/catalog/chapters/${chapterId}/pdf`;
+  },
+
+  /**
+   * Wrap an S3/MinIO URL in the backend proxy to avoid MetadataTooLarge errors.
+   */
+  getMediaProxyUrl(url) {
+    if (!url) return "";
+    // Only proxy urls that look like our bucket URLs
+    if (url.includes(":9000") || url.includes("uploads/")) {
+      return `${BASE_URL}/catalog/media?url=${encodeURIComponent(url)}`;
+    }
+    return url;
+  },
 };
 
 // ─────────────────────────────────────────────────────────────────────

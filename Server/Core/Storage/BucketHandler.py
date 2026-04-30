@@ -79,6 +79,25 @@ class BucketHandler:
         key = filename if filename.startswith("uploads/") else f"uploads/{filename}"
         return self._build_public_url(key)
 
+    def get_file_stream(self, key_or_url: str):
+        """Fetch the object from S3 and return a streaming body and content type."""
+        from urllib.parse import urlparse
+        
+        key = key_or_url
+        if key_or_url.startswith("http"):
+            path = urlparse(key_or_url).path
+            bucket_prefix = f"/{self._bucket}/"
+            if path.startswith(bucket_prefix):
+                key = path[len(bucket_prefix):]
+            elif path.startswith("/"):
+                key = path[1:]
+
+        try:
+            response = self._client.get_object(Bucket=self._bucket, Key=key)
+            return response["Body"], response.get("ContentType", "application/pdf")
+        except (BotoCoreError, ClientError) as exc:
+            raise BucketHandlerError(f"Failed to fetch file '{key}': {exc}") from exc
+
     def delete_file(self, filename: str) -> bool:
         """Delete a file from the bucket. Returns True on success, False otherwise."""
         key = filename if filename.startswith("uploads/") else f"uploads/{filename}"
