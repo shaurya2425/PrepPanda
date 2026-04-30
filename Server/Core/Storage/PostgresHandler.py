@@ -421,3 +421,244 @@ class PostgresHandler:
         )
 
         return [self._record_to_dict(r) for r in rows]
+
+    # ==========================================================
+    # CATALOG — user-facing read queries
+    # ==========================================================
+
+    async def list_books(
+        self,
+        grade: Optional[int] = None,
+        subject: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        """List all books, optionally filtered by grade and/or subject."""
+        pool = self._pool_guard()
+
+        clauses: List[str] = []
+        params: list = []
+        idx = 1
+
+        if grade is not None:
+            clauses.append(f"b.grade = ${idx}")
+            params.append(grade)
+            idx += 1
+        if subject is not None:
+            clauses.append(f"LOWER(b.subject) = LOWER(${idx})")
+            params.append(subject)
+            idx += 1
+
+        where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
+
+        rows = await pool.fetch(
+            f"""
+            SELECT b.*,
+                   COUNT(DISTINCT ch.chapter_id) AS chapter_count
+            FROM core.books b
+            LEFT JOIN core.chapters ch ON ch.book_id = b.book_id
+            {where}
+            GROUP BY b.book_id
+            ORDER BY b.grade, b.subject, b.title
+            """,
+            *params,
+        )
+        return [self._record_to_dict(r) for r in rows]
+
+    async def get_book(self, book_id: uuid.UUID) -> Optional[Dict[str, Any]]:
+        """Get a single book by ID."""
+        pool = self._pool_guard()
+        row = await pool.fetchrow(
+            "SELECT * FROM core.books WHERE book_id = $1", book_id
+        )
+        return self._record_to_dict(row) if row else None
+
+    async def list_chapters(
+        self, book_id: uuid.UUID
+    ) -> List[Dict[str, Any]]:
+        """List all chapters for a book with aggregate counts."""
+        pool = self._pool_guard()
+        rows = await pool.fetch(
+            """
+            SELECT ch.*,
+                   COALESCE(cs.chunk_count, 0)  AS chunk_count,
+                   COALESCE(cs.image_count, 0)  AS image_count,
+                   COALESCE(ps.pyq_count, 0)    AS pyq_count
+            FROM core.chapters ch
+            LEFT JOIN LATERAL (
+                SELECT COUNT(*)            AS chunk_count,
+                       COUNT(DISTINCT cil.image_id) AS image_count
+                FROM core.chunks c
+                LEFT JOIN core.chunk_image_links cil ON cil.chunk_id = c.chunk_id
+                WHERE c.chapter_id = ch.chapter_id
+            ) cs ON TRUE
+            LEFT JOIN LATERAL (
+                SELECT COUNT(*) AS pyq_count
+                FROM core.pyqs p
+                WHERE p.chapter_id = ch.chapter_id
+            ) ps ON TRUE
+            WHERE ch.book_id = $1
+            ORDER BY ch.chapter_number
+            """,
+            book_id,
+        )
+        return [self._record_to_dict(r) for r in rows]
+
+    async def get_chapter(
+        self, chapter_id: uuid.UUID
+    ) -> Optional[Dict[str, Any]]:
+        """Get a single chapter by ID with aggregate counts."""
+        pool = self._pool_guard()
+        row = await pool.fetchrow(
+            """
+            SELECT ch.*,
+                   COALESCE(cs.chunk_count, 0)  AS chunk_count,
+                   COALESCE(cs.image_count, 0)  AS image_count,
+                   COALESCE(ps.pyq_count, 0)    AS pyq_count
+            FROM core.chapters ch
+            LEFT JOIN LATERAL (
+                SELECT COUNT(*)            AS chunk_count,
+                       COUNT(DISTINCT cil.image_id) AS image_count
+                FROM core.chunks c
+                LEFT JOIN core.chunk_image_links cil ON cil.chunk_id = c.chunk_id
+                WHERE c.chapter_id = ch.chapter_id
+            ) cs ON TRUE
+            LEFT JOIN LATERAL (
+                SELECT COUNT(*) AS pyq_count
+                FROM core.pyqs p
+                WHERE p.chapter_id = ch.chapter_id
+            ) ps ON TRUE
+            WHERE ch.chapter_id = $1
+            """,
+            chapter_id,
+        )
+        return self._record_to_dict(row) if row else None
+
+    async def list_pyqs(
+        self,
+        *,
+        book_id: Optional[uuid.UUID] = None,
+        chapter_id: Optional[uuid.UUID] = None,
+        year: Optional[int] = None,
+        exam: Optional[str] = None,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> List[Dict[str, Any]]:
+        """List PYQs with flexible filtering."""
+        pool = self._pool_guard()
+
+        clauses: List[str] = []
+        params: list = []
+        idx = 1
+
+        if book_id is not None:
+            clauses.append(f"p.book_id = ${idx}")
+            params.append(book_id)
+            idx += 1
+        if chapter_id is not None:
+            clauses.append(f"p.chapter_id = ${idx}")
+            params.append(chapter_id)
+            idx += 1
+        if year is not None:
+            clauses.append(f"p.year = ${idx}")
+            params.append(year)
+            idx += 1
+        if exam is not None:
+            clauses.append(f"UPPER(p.exam) = UPPER(${idx})")
+            params.append(exam)
+            idx += 1
+
+        where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
+
+        rows = await pool.fetch(
+            f"""
+            SELECT p.*
+            FROM core.pyqs p
+            {where}
+            ORDER BY p.year DESC NULLS LAST, p.created_at DESC
+            LIMIT ${idx} OFFSET ${idx + 1}
+            """,
+            *params,
+            limit,
+            offset,
+        )
+        return [self._record_to_dict(r) for r in rows]
+
+    async def count_pyqs(
+        self,
+        *,
+        book_id: Optional[uuid.UUID] = None,
+        chapter_id: Optional[uuid.UUID] = None,
+        year: Optional[int] = None,
+        exam: Optional[str] = None,
+    ) -> int:
+        """Count PYQs matching the given filters (for pagination metadata)."""
+        pool = self._pool_guard()
+
+        clauses: List[str] = []
+        params: list = []
+        idx = 1
+
+        if book_id is not None:
+            clauses.append(f"book_id = ${idx}")
+            params.append(book_id)
+            idx += 1
+        if chapter_id is not None:
+            clauses.append(f"chapter_id = ${idx}")
+            params.append(chapter_id)
+            idx += 1
+        if year is not None:
+            clauses.append(f"year = ${idx}")
+            params.append(year)
+            idx += 1
+        if exam is not None:
+            clauses.append(f"UPPER(exam) = UPPER(${idx})")
+            params.append(exam)
+            idx += 1
+
+        where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
+
+        row = await pool.fetchrow(
+            f"SELECT COUNT(*) AS cnt FROM core.pyqs {where}", *params
+        )
+        return row["cnt"]
+
+    async def get_chunks_in_range(
+        self,
+        chapter_id: uuid.UUID,
+        start: int,
+        end: int,
+    ) -> List[Dict[str, Any]]:
+        """Get chunks for a chapter within a position_index range [start, end]."""
+        pool = self._pool_guard()
+        rows = await pool.fetch(
+            """
+            SELECT *
+            FROM core.chunks
+            WHERE chapter_id = $1
+              AND position_index >= $2
+              AND position_index <= $3
+            ORDER BY position_index
+            """,
+            chapter_id,
+            start,
+            end,
+        )
+        return [self._record_to_dict(r) for r in rows]
+
+    async def get_chapter_chunk_bounds(
+        self, chapter_id: uuid.UUID
+    ) -> Optional[Dict[str, Any]]:
+        """Return min/max position_index and total chunk count for a chapter."""
+        pool = self._pool_guard()
+        row = await pool.fetchrow(
+            """
+            SELECT MIN(position_index) AS min_pos,
+                   MAX(position_index) AS max_pos,
+                   COUNT(*)            AS total
+            FROM core.chunks
+            WHERE chapter_id = $1
+            """,
+            chapter_id,
+        )
+        if not row or row["total"] == 0:
+            return None
+        return self._record_to_dict(row)

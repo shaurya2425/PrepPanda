@@ -65,7 +65,7 @@ async def main() -> None:
         generator = Generator()
 
         # ── 3. Run Query ────────────────────────────────────────────────
-        query = "Analyze how flowering plants ensure successful fertilisation despite non-motile gametes, integrating mechanisms of pollination, pollen-pistil interaction, and double fertilisation."
+        query = "Where are pollen grains formed?"
         
         logger.info(f"\n--- Running Query ---\nQuestion: {query}\n---------------------")
         

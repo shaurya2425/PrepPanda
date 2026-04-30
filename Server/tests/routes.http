@@ -558,7 +558,7 @@ Accept: application/json
 ###       Uses pyqs_2026.txt — the fixture file next to this .http file.
 ###       Each PYQ is auto-mapped to the most relevant chapter.
 # @name ingest_pyqs_2026_file
-POST {{base}}/admin/books/a6208d0e-62c8-4785-9f07-aff43c385924/pyqs/file
+POST {{base}}/admin/books/55deb648-932c-4271-88e4-08e4c2abeb0a/pyqs/file
 X-Admin-Key: {{admin_key}}
 Content-Type: multipart/form-data; boundary=----Pyq2026Boundary
 

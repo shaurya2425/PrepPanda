@@ -17,7 +17,7 @@ import uuid
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from Core.Features.MindMap import MindMapBuilder, MindMapNode, SemanticTag
 from Routers.deps import PgDep
@@ -128,6 +128,144 @@ async def get_mindmap_flat(
     tree: MindMapNode = MindMapBuilder.from_db_chunks(
         chunk_dicts,
         root_label=chapter_title,
+    )
+
+    flat: List[FlatNode] = []
+    _flatten(tree, parent_id=None, acc=flat)
+
+    return MindMapFlatOut(
+        chapter_id=chapter_id,
+        chapter_title=chapter_title,
+        nodes=flat,
+    )
+
+
+# ── Chunk-range mindmap ──────────────────────────────────────────────
+
+class ChunkRangeIn(BaseModel):
+    """Define a chunk position range for a partial mind-map."""
+    start: int = Field(..., ge=0, description="Start position_index (inclusive)")
+    end:   int = Field(..., ge=0, description="End position_index (inclusive)")
+
+
+class ChunkBoundsOut(BaseModel):
+    chapter_id: uuid.UUID
+    min_pos: int
+    max_pos: int
+    total: int
+
+
+@router.get(
+    "/{chapter_id}/bounds",
+    response_model=ChunkBoundsOut,
+    summary="Get chunk position bounds for a chapter",
+)
+async def get_chunk_bounds(
+    chapter_id: uuid.UUID,
+    pg: PgDep,
+) -> ChunkBoundsOut:
+    """
+    Return the min / max ``position_index`` and total chunk count for a
+    chapter.  Useful for the frontend to know valid ranges before
+    requesting a partial mind-map.
+    """
+    bounds = await pg.get_chapter_chunk_bounds(chapter_id)
+    if not bounds:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No chunks found for chapter {chapter_id}.",
+        )
+    return ChunkBoundsOut(chapter_id=chapter_id, **bounds)
+
+
+@router.post(
+    "/{chapter_id}/range",
+    response_model=MindMapOut,
+    summary="Build a mind-map from a chunk range",
+)
+async def get_mindmap_range(
+    chapter_id: uuid.UUID,
+    body: ChunkRangeIn,
+    pg: PgDep,
+) -> MindMapOut:
+    """
+    Build a mind-map from a **subset** of chunks defined by
+    ``position_index`` range ``[start, end]``.
+
+    This lets the frontend request a focused mind-map for a specific
+    section of a chapter instead of the entire chapter.
+    """
+    pool = pg._pool_guard()
+    chapter_row = await pool.fetchrow(
+        "SELECT * FROM core.chapters WHERE chapter_id = $1", chapter_id
+    )
+    if not chapter_row:
+        raise HTTPException(status_code=404, detail=f"Chapter {chapter_id} not found.")
+
+    if body.start > body.end:
+        raise HTTPException(status_code=422, detail="start must be ≤ end")
+
+    chunk_rows = await pg.get_chunks_in_range(chapter_id, body.start, body.end)
+    if not chunk_rows:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No chunks found in range [{body.start}, {body.end}] for chapter {chapter_id}.",
+        )
+
+    chunk_dicts = [pg._record_to_dict(r) if hasattr(r, 'keys') else r for r in chunk_rows]
+    chapter_title = chapter_row["title"]
+
+    tree: MindMapNode = MindMapBuilder.from_db_chunks(
+        chunk_dicts,
+        root_label=f"{chapter_title} (chunks {body.start}–{body.end})",
+    )
+
+    return MindMapOut(
+        chapter_id=chapter_id,
+        chapter_title=chapter_title,
+        node_count=tree.node_count(),
+        leaf_count=tree.leaf_count(),
+        tree=tree.to_dict(),
+    )
+
+
+@router.post(
+    "/{chapter_id}/range/flat",
+    response_model=MindMapFlatOut,
+    summary="Flat mind-map from a chunk range",
+)
+async def get_mindmap_range_flat(
+    chapter_id: uuid.UUID,
+    body: ChunkRangeIn,
+    pg: PgDep,
+) -> MindMapFlatOut:
+    """
+    Same as ``/range`` but returns a flat node list instead of a
+    nested tree.
+    """
+    pool = pg._pool_guard()
+    chapter_row = await pool.fetchrow(
+        "SELECT * FROM core.chapters WHERE chapter_id = $1", chapter_id
+    )
+    if not chapter_row:
+        raise HTTPException(status_code=404, detail=f"Chapter {chapter_id} not found.")
+
+    if body.start > body.end:
+        raise HTTPException(status_code=422, detail="start must be ≤ end")
+
+    chunk_rows = await pg.get_chunks_in_range(chapter_id, body.start, body.end)
+    if not chunk_rows:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No chunks found in range [{body.start}, {body.end}] for chapter {chapter_id}.",
+        )
+
+    chunk_dicts = [pg._record_to_dict(r) if hasattr(r, 'keys') else r for r in chunk_rows]
+    chapter_title = chapter_row["title"]
+
+    tree: MindMapNode = MindMapBuilder.from_db_chunks(
+        chunk_dicts,
+        root_label=f"{chapter_title} (chunks {body.start}–{body.end})",
     )
 
     flat: List[FlatNode] = []
