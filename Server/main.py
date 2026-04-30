@@ -36,6 +36,7 @@ from Core.Parser.embedder import ChunkEmbedder
 from Core.Storage.BucketHandler import BucketHandler
 from Core.Storage.PostgresHandler import PostgresHandler
 from Routers import admin as admin_router
+from Routers import analysis as analysis_router
 from Routers import catalog as catalog_router
 from Routers import mindmap as mindmap_router
 from Routers import srs as srs_router
@@ -108,6 +109,7 @@ app.add_middleware(
 # ─────────────────────────────────────────────────────────────────────
 
 app.include_router(admin_router.router)
+app.include_router(analysis_router.router)
 app.include_router(catalog_router.router)
 app.include_router(srs_router.router)
 app.include_router(mindmap_router.router)

@@ -485,6 +485,34 @@ const mindmap = {
 };
 
 // ─────────────────────────────────────────────────────────────────────
+// API — Analysis
+// ─────────────────────────────────────────────────────────────────────
+
+const analysis = {
+  /**
+   * Get full PYQ analysis for a book (zones, trends, predictions).
+   *
+   * @param {string} bookId - UUID
+   * @param {{ zone_radius?: number, top_k?: number }} [params]
+   * @returns {Promise<any>}
+   */
+  getBookAnalysis(bookId, params = {}) {
+    return request(`/analysis/books/${bookId}${qs(params)}`);
+  },
+
+  /**
+   * Get full PYQ analysis scoped to a single chapter.
+   *
+   * @param {string} chapterId - UUID
+   * @param {{ zone_radius?: number, top_k?: number }} [params]
+   * @returns {Promise<any>}
+   */
+  getChapterAnalysis(chapterId, params = {}) {
+    return request(`/analysis/chapters/${chapterId}${qs(params)}`);
+  },
+};
+
+// ─────────────────────────────────────────────────────────────────────
 // Public surface
 // ─────────────────────────────────────────────────────────────────────
 
@@ -496,6 +524,7 @@ export const api = {
   pyqs,
   srs,
   mindmap,
+  analysis,
 };
 
 export default api;

@@ -662,3 +662,54 @@ class PostgresHandler:
         if not row or row["total"] == 0:
             return None
         return self._record_to_dict(row)
+
+    # ==========================================================
+    # PYQ ANALYSIS — bulk data for trend / prediction engine
+    # ==========================================================
+
+    async def get_pyq_chunk_analysis(
+        self,
+        book_id: uuid.UUID,
+        chapter_id: Optional[uuid.UUID] = None,
+    ) -> List[Dict[str, Any]]:
+        """Fetch all PYQ→chunk mappings for analysis in a single round-trip.
+
+        Each row contains the PYQ metadata, the mapped chunk details, and the
+        relevance score.  This powers the topic-zone frequency analysis.
+        """
+        pool = self._pool_guard()
+
+        chapter_filter = ""
+        params: list = [book_id]
+
+        if chapter_id is not None:
+            chapter_filter = "AND ch.chapter_id = $2"
+            params.append(chapter_id)
+
+        rows = await pool.fetch(
+            f"""
+            SELECT p.pyq_id,
+                   p.question,
+                   p.answer,
+                   p.year,
+                   p.exam,
+                   p.marks,
+                   pcm.chunk_id,
+                   pcm.relevance,
+                   c.position_index,
+                   c.section_title,
+                   c.content,
+                   ch.chapter_id,
+                   ch.title AS chapter_title,
+                   ch.chapter_number
+            FROM core.pyqs p
+            JOIN core.pyq_chunk_map pcm ON pcm.pyq_id = p.pyq_id
+            JOIN core.chunks c          ON c.chunk_id  = pcm.chunk_id
+            JOIN core.chapters ch       ON ch.chapter_id = c.chapter_id
+            WHERE p.book_id = $1
+              {chapter_filter}
+            ORDER BY ch.chapter_number, c.position_index
+            """,
+            *params,
+        )
+        return [self._record_to_dict(r) for r in rows]

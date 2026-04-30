@@ -1,56 +1,165 @@
-import { useState, useEffect } from "react";
-import { Plus, Minus, Sparkles, Loader2, Maximize } from "lucide-react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { Sparkles, Loader2, Maximize, PanelRightClose, PanelRightOpen, Image as ImageIcon } from "lucide-react";
 import { api } from "@/lib/api";
+import {
+  ReactFlow,
+  MiniMap,
+  Controls,
+  Background,
+  useNodesState,
+  useEdgesState,
+  addEdge,
+  Handle,
+  Position,
+  Panel
+} from "@xyflow/react";
+import "@xyflow/react/dist/style.css";
+import dagre from "dagre";
 
 const getStatusColor = (tag) => {
-  const t = (tag || '').toLowerCase();
-  if (t === 'core_concept') return '#10B981'; // Green
-  if (t === 'definition') return '#F59E0B'; // Yellow
-  if (t === 'example' || t === 'application') return '#3B82F6'; // Blue
-  return '#8B5CF6'; // Purple for detail/other
+  const t = (tag || "").toLowerCase();
+  if (t === "core_concept") return "#10B981"; // Green
+  if (t === "definition") return "#F59E0B"; // Yellow
+  if (t === "example" || t === "application") return "#3B82F6"; // Blue
+  return "#8B5CF6"; // Purple for detail/other
 };
 
-// Simple recursive tree layout
-function layoutTree(node, x = 400, y = 80, xOffset = 300) {
-  const result = { 
-    ...node, 
-    x, 
-    y,
-    // default status for styling
-    status: node.tag || 'concept'
-  };
+// ─────────────────────────────────────────────────────────────────────────────
+// Custom Node Component
+// ─────────────────────────────────────────────────────────────────────────────
+const CustomNode = ({ data, selected }) => {
+  const color = getStatusColor(data.tag);
+  
+  return (
+    <div
+      className="relative px-5 py-3 rounded-2xl shadow-sm transition-all duration-200 glass"
+      style={{
+        border: `2px solid ${color}`,
+        background: "var(--bg-secondary)",
+        boxShadow: selected ? `0 0 0 4px ${color}33, var(--shadow-md)` : "var(--shadow-sm)",
+        transform: selected ? "scale(1.02)" : "scale(1)",
+        minWidth: "180px",
+        maxWidth: "280px"
+      }}
+    >
+      <Handle type="target" position={Position.Top} className="w-3 h-3 border-2" style={{ background: color, borderColor: 'var(--bg-primary)' }} />
+      
+      {data.tag && data.depth > 0 && (
+        <div className="text-[10px] font-bold uppercase tracking-widest mb-1.5 opacity-80 flex justify-between items-center" style={{ color }}>
+          <span>{data.tag.replace("_", " ")}</span>
+          {data.figureCount > 0 && (
+            <span className="flex items-center gap-1 opacity-70">
+              <ImageIcon className="w-3 h-3" /> {data.figureCount}
+            </span>
+          )}
+        </div>
+      )}
+      
+      <div className={`text-sm font-semibold leading-snug ${data.depth === 0 ? "text-base font-extrabold" : ""}`} style={{ color: "var(--text-primary)" }}>
+        {data.label}
+      </div>
 
-  if (node.children && node.children.length > 0) {
-    const totalWidth = (node.children.length - 1) * xOffset;
-    const startX = x - totalWidth / 2;
-    result.children = node.children.map((child, idx) => 
-      layoutTree(child, startX + idx * xOffset, y + 120, xOffset * 0.6)
-    );
-  }
-  return result;
-}
+      <Handle type="source" position={Position.Bottom} className="w-3 h-3 border-2" style={{ background: color, borderColor: 'var(--bg-primary)' }} />
+    </div>
+  );
+};
 
-export function MindmapTab({ title = 'this chapter', chapterId }) {
+const nodeTypes = {
+  custom: CustomNode,
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Dagre Auto-Layout
+// ─────────────────────────────────────────────────────────────────────────────
+const getLayoutedElements = (nodes, edges, direction = "TB") => {
+  const dagreGraph = new dagre.graphlib.Graph();
+  dagreGraph.setDefaultEdgeLabel(() => ({}));
+
+  const nodeWidth = 250;
+  const nodeHeight = 80;
+
+  dagreGraph.setGraph({ rankdir: direction, nodesep: 60, ranksep: 100 });
+
+  nodes.forEach((node) => {
+    dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight });
+  });
+
+  edges.forEach((edge) => {
+    dagreGraph.setEdge(edge.source, edge.target);
+  });
+
+  dagre.layout(dagreGraph);
+
+  nodes.forEach((node) => {
+    const nodeWithPosition = dagreGraph.node(node.id);
+    // Shift slightly so the anchor is top-left rather than center
+    node.targetPosition = Position.Top;
+    node.sourcePosition = Position.Bottom;
+    node.position = {
+      x: nodeWithPosition.x - nodeWidth / 2,
+      y: nodeWithPosition.y - nodeHeight / 2,
+    };
+  });
+
+  return { nodes, edges };
+};
+
+
+export function MindmapTab({ title = "this chapter", chapterId }) {
   const [isGenerated, setIsGenerated] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [rootData, setRootData] = useState(null);
   const [error, setError] = useState(null);
 
-  const [zoom, setZoom] = useState(1);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const [selectedNode, setSelectedNode] = useState(null);
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [selectedNodeData, setSelectedNodeData] = useState(null);
+  const [isSidePanelOpen, setIsSidePanelOpen] = useState(true);
 
   const handleGenerate = async () => {
     setIsGenerating(true);
     setError(null);
     try {
-      const data = await api.mindmap.getTree(chapterId);
-      if (data && data.tree) {
-        // Apply layout to the semantic tree
-        const laidOut = layoutTree(data.tree);
-        setRootData(laidOut);
+      const data = await api.mindmap.getFlat(chapterId);
+      if (data && data.nodes) {
+        // Build React Flow nodes
+        const rfNodes = data.nodes.map((n) => ({
+          id: String(n.id),
+          type: "custom",
+          data: {
+            label: n.label,
+            tag: n.tag,
+            depth: n.depth,
+            detail: n.detail,
+            figureCount: n.figure_ids ? n.figure_ids.length : 0,
+            raw: n
+          },
+          position: { x: 0, y: 0 } // Will be set by dagre
+        }));
+
+        // Build edges
+        const rfEdges = [];
+        data.nodes.forEach((n) => {
+          if (n.parent_id) {
+            rfEdges.push({
+              id: `e-${n.parent_id}-${n.id}`,
+              source: String(n.parent_id),
+              target: String(n.id),
+              type: "smoothstep",
+              animated: true,
+              style: { stroke: getStatusColor(n.tag), strokeWidth: 2, opacity: 0.6 }
+            });
+          }
+        });
+
+        // Apply auto-layout
+        const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
+          rfNodes,
+          rfEdges,
+          "TB"
+        );
+
+        setNodes(layoutedNodes);
+        setEdges(layoutedEdges);
         setIsGenerated(true);
       }
     } catch (err) {
@@ -61,80 +170,33 @@ export function MindmapTab({ title = 'this chapter', chapterId }) {
     }
   };
 
-  const handleMouseDown = (e) => {
-    setIsDragging(true);
-    setDragStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
-  };
-
-  const handleMouseMove = (e) => {
-    if (!isDragging) return;
-    setPan({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y });
-  };
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
-  };
-
-  const renderNode = (node) => {
-    const isSelected = selectedNode?.id === node.id;
-    const color = getStatusColor(node.tag);
-    
-    // Auto-wrap text roughly
-    const label = node.label.length > 25 ? node.label.substring(0, 22) + '...' : node.label;
-
-    return (
-      <g key={node.id}>
-        {node.children?.map(child => (
-          <line key={`line-${node.id}-${child.id}`} x1={node.x} y1={node.y} x2={child.x} y2={child.y}
-            stroke="var(--border)" strokeWidth="2" opacity="0.4" />
-        ))}
-        <g 
-          onClick={(e) => { e.stopPropagation(); setSelectedNode(node); }} 
-          style={{ cursor: 'pointer' }}
-        >
-          <rect x={node.x - 75} y={node.y - 25} width="150" height="50" rx="12"
-            fill="var(--bg-secondary)" stroke={color} strokeWidth={isSelected ? "3" : "2"}
-            style={{ filter: isSelected ? `drop-shadow(0 0 16px ${color}60)` : 'none' }} />
-          
-          <text x={node.x} y={node.y + 4} textAnchor="middle" fill="var(--text-primary)"
-            fontSize="12" fontWeight={node.depth === 0 ? "700" : "500"} fontFamily="Inter, sans-serif">
-            {label}
-          </text>
-          
-          {node.tag && node.depth > 0 && (
-            <text x={node.x} y={node.y - 32} textAnchor="middle" fill={color}
-              fontSize="10" fontWeight="600" opacity="0.8">
-              {node.tag.toUpperCase()}
-            </text>
-          )}
-        </g>
-        {node.children?.map(child => renderNode(child))}
-      </g>
-    );
-  };
+  const onNodeClick = useCallback((event, node) => {
+    setSelectedNodeData(node.data);
+    setIsSidePanelOpen(true);
+  }, []);
 
   if (!isGenerated) {
     return (
-      <div className="h-full flex flex-col items-center justify-center p-6" style={{ background: 'var(--bg-primary)' }}>
-        <div className="max-w-md w-full p-10 rounded-3xl border text-center glass animate-fade-up" style={{ borderColor: 'var(--border)', boxShadow: 'var(--shadow-lg)' }}>
-          <div className="w-20 h-20 mx-auto rounded-3xl flex items-center justify-center mb-6" style={{ background: 'var(--bg-tertiary)', border: '1px solid var(--border)' }}>
-            <Sparkles className="w-10 h-10" style={{ color: 'var(--accent-primary)' }} />
+      <div className="h-full flex flex-col items-center justify-center p-6" style={{ background: "var(--bg-primary)" }}>
+        <div className="max-w-md w-full p-10 rounded-3xl border text-center glass animate-fade-up" style={{ borderColor: "var(--border)", boxShadow: "var(--shadow-lg)" }}>
+          <div className="w-20 h-20 mx-auto rounded-3xl flex items-center justify-center mb-6" style={{ background: "var(--bg-tertiary)", border: "1px solid var(--border)" }}>
+            <Sparkles className="w-10 h-10" style={{ color: "var(--accent-primary)" }} />
           </div>
-          <h2 className="text-2xl font-bold mb-3" style={{ color: 'var(--text-primary)' }}>Visual Mindmap</h2>
-          <p className="text-[17px] mb-8 leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
-            Automatically extract a hierarchical concept map for <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>{title}</span>.
+          <h2 className="text-2xl font-bold mb-3" style={{ color: "var(--text-primary)" }}>Visual Mindmap</h2>
+          <p className="text-[17px] mb-8 leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+            Automatically extract an interactive semantic map for <span className="font-semibold" style={{ color: "var(--text-primary)" }}>{title}</span>.
           </p>
-          
+
           {error && (
             <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-sm font-medium">
               {error}
             </div>
           )}
 
-          <button 
+          <button
             onClick={handleGenerate} disabled={isGenerating}
             className="w-full h-14 rounded-2xl text-[17px] font-bold flex items-center justify-center gap-2 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
-            style={{ background: 'var(--gradient-primary)', color: '#FFFFFF', boxShadow: 'var(--shadow-glow)' }}>
+            style={{ background: "var(--gradient-primary)", color: "#FFFFFF", boxShadow: "var(--shadow-glow)" }}>
             {isGenerating ? <><Loader2 className="w-5 h-5 animate-spin" /> Analyzing Chapter...</> : <><Sparkles className="w-5 h-5" /> Generate Concept Map</>}
           </button>
         </div>
@@ -143,89 +205,111 @@ export function MindmapTab({ title = 'this chapter', chapterId }) {
   }
 
   return (
-    <div className="h-full relative flex" style={{ background: 'var(--bg-primary)' }}>
-      {/* SVG Canvas */}
-      <div 
-        className="flex-1 overflow-hidden cursor-grab active:cursor-grabbing relative"
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-        onClick={() => setSelectedNode(null)}
-      >
-        <svg width="100%" height="100%">
-          <defs>
-            <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-              <circle cx="2" cy="2" r="1.5" fill="var(--border)" opacity="0.4" />
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#grid)" />
-          
-          <g transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}>
-            {rootData && renderNode(rootData)}
-          </g>
-        </svg>
-      </div>
-
-      {/* Controls & Legend */}
-      <div className="absolute top-6 right-6 z-10 flex flex-col gap-4">
-        <div className="flex flex-col gap-2 p-2 rounded-2xl glass" style={{ boxShadow: 'var(--shadow-md)', borderColor: 'var(--border)' }}>
-          <button onClick={() => setZoom(z => Math.min(z + 0.1, 2))} className="w-10 h-10 rounded-xl flex items-center justify-center transition-all hover:bg-black/5 dark:hover:bg-white/10">
-            <Plus className="w-5 h-5" style={{ color: 'var(--text-primary)' }} />
-          </button>
-          <button onClick={() => { setZoom(1); setPan({x:0, y:0}); }} className="w-10 h-10 rounded-xl flex items-center justify-center transition-all hover:bg-black/5 dark:hover:bg-white/10">
-            <Maximize className="w-4 h-4" style={{ color: 'var(--text-primary)' }} />
-          </button>
-          <button onClick={() => setZoom(z => Math.max(z - 0.1, 0.3))} className="w-10 h-10 rounded-xl flex items-center justify-center transition-all hover:bg-black/5 dark:hover:bg-white/10">
-            <Minus className="w-5 h-5" style={{ color: 'var(--text-primary)' }} />
-          </button>
-        </div>
-      </div>
-
-      <div className="absolute bottom-6 left-6 z-10">
-        <div className="p-5 rounded-3xl glass border" style={{ boxShadow: 'var(--shadow-lg)', borderColor: 'var(--border)' }}>
-          <div className="text-sm font-bold mb-4 uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Semantic Tags</div>
-          <div className="space-y-3">
-            {[
-              ['#10B981', 'Core Concept'], 
-              ['#F59E0B', 'Definition'], 
-              ['#3B82F6', 'Example / App'],
-              ['#8B5CF6', 'Detail']
-            ].map(([color, label]) => (
-              <div key={label} className="flex items-center gap-3">
-                <div className="w-4 h-4 rounded-full shadow-sm" style={{ backgroundColor: color, border: '2px solid rgba(255,255,255,0.1)' }} />
-                <span className="text-[13px] font-medium" style={{ color: 'var(--text-secondary)' }}>{label}</span>
+    <div className="h-full relative flex" style={{ background: "var(--bg-primary)" }}>
+      {/* React Flow Canvas */}
+      <div className="flex-1 h-full relative">
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onNodeClick={onNodeClick}
+          nodeTypes={nodeTypes}
+          fitView
+          fitViewOptions={{ padding: 0.2 }}
+          minZoom={0.1}
+          maxZoom={2}
+          attributionPosition="bottom-left"
+          proOptions={{ hideAttribution: true }}
+        >
+          <Background color="var(--border)" gap={20} size={1} />
+          <Controls 
+            className="glass !border-[var(--border)] !rounded-xl !shadow-md overflow-hidden" 
+            position="top-right" 
+          />
+          <Panel position="bottom-left" className="m-6">
+            <div className="p-4 rounded-2xl glass border" style={{ boxShadow: "var(--shadow-lg)", borderColor: "var(--border)" }}>
+              <div className="text-xs font-bold mb-3 uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Semantic Tags</div>
+              <div className="space-y-2.5">
+                {[
+                  ["#10B981", "Core Concept"],
+                  ["#F59E0B", "Definition"],
+                  ["#3B82F6", "Example / App"],
+                  ["#8B5CF6", "Detail"]
+                ].map(([color, label]) => (
+                  <div key={label} className="flex items-center gap-3">
+                    <div className="w-3.5 h-3.5 rounded-full shadow-sm" style={{ backgroundColor: color, border: "2px solid var(--bg-primary)" }} />
+                    <span className="text-xs font-semibold" style={{ color: "var(--text-secondary)" }}>{label}</span>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </div>
+            </div>
+          </Panel>
+        </ReactFlow>
       </div>
 
       {/* Side Panel for Node Detail */}
-      {selectedNode && (
-        <div className="w-80 h-full border-l glass animate-slide-left flex flex-col" style={{ borderColor: 'var(--border)' }}>
-          <div className="p-6 border-b" style={{ borderColor: 'var(--border)' }}>
-            <div className="text-xs font-bold mb-2 px-2.5 py-1 rounded-lg inline-block uppercase tracking-wide" style={{
-              background: 'var(--bg-tertiary)', color: getStatusColor(selectedNode.tag),
-            }}>
-              {selectedNode.tag ? selectedNode.tag.replace('_', ' ') : 'Concept'}
+      <div 
+        className={`h-full border-l glass transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] flex flex-col relative ${isSidePanelOpen && selectedNodeData ? "w-[360px]" : "w-0 opacity-0 overflow-hidden"}`} 
+        style={{ borderColor: "var(--border)" }}
+      >
+        <button 
+          onClick={() => setIsSidePanelOpen(false)}
+          className="absolute top-4 right-4 p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-muted transition-colors"
+        >
+          <PanelRightClose className="w-5 h-5" />
+        </button>
+
+        {selectedNodeData && (
+          <>
+            <div className="p-7 border-b pr-14" style={{ borderColor: "var(--border)" }}>
+              <div className="text-[10px] font-extrabold mb-3 px-2.5 py-1 rounded-lg inline-block uppercase tracking-widest" style={{
+                background: `${getStatusColor(selectedNodeData.tag)}15`, color: getStatusColor(selectedNodeData.tag),
+              }}>
+                {selectedNodeData.tag ? selectedNodeData.tag.replace("_", " ") : "Concept"}
+              </div>
+              <h3 className="text-xl font-bold leading-snug" style={{ color: "var(--text-primary)" }}>
+                {selectedNodeData.label}
+              </h3>
             </div>
-            <h3 className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>
-              {selectedNode.label}
-            </h3>
-          </div>
-          <div className="p-6 flex-1 overflow-y-auto custom-scrollbar">
-            {selectedNode.detail ? (
-              <div className="text-[15px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
-                {selectedNode.detail}
-              </div>
-            ) : (
-              <div className="text-sm italic" style={{ color: 'var(--text-muted)' }}>
-                No detailed summary available for this node.
-              </div>
-            )}
-          </div>
-        </div>
+            
+            <div className="p-7 flex-1 overflow-y-auto custom-scrollbar">
+              <div className="text-sm font-bold uppercase tracking-wider mb-4" style={{ color: "var(--text-muted)" }}>Summary</div>
+              {selectedNodeData.detail ? (
+                <div className="text-[15px] leading-relaxed" style={{ color: "var(--text-secondary)" }}>
+                  {selectedNodeData.detail}
+                </div>
+              ) : (
+                <div className="text-[15px] italic" style={{ color: "var(--text-muted)" }}>
+                  No detailed summary available.
+                </div>
+              )}
+              
+              {selectedNodeData.figureCount > 0 && (
+                <div className="mt-8 p-4 rounded-2xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/5">
+                  <div className="flex items-center gap-2 font-bold text-sm mb-1" style={{ color: "var(--text-primary)" }}>
+                    <ImageIcon className="w-4 h-4" style={{ color: "var(--accent-primary)" }} />
+                    Associated Figures
+                  </div>
+                  <div className="text-xs" style={{ color: "var(--text-secondary)" }}>
+                    This concept references {selectedNodeData.figureCount} figure{selectedNodeData.figureCount !== 1 ? 's' : ''} in the textbook.
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+      
+      {/* Open panel button (when closed but a node is selected) */}
+      {!isSidePanelOpen && selectedNodeData && (
+        <button 
+          onClick={() => setIsSidePanelOpen(true)}
+          className="absolute top-6 right-6 p-3 rounded-2xl glass border shadow-md hover:bg-black/5 dark:hover:bg-white/10 transition-colors z-10"
+          style={{ borderColor: "var(--border)", color: "var(--text-primary)" }}
+        >
+          <PanelRightOpen className="w-5 h-5" />
+        </button>
       )}
     </div>
   );
