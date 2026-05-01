@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router";
-import { Brain, ArrowLeft, BookOpen, FileText, Trash2, Plus, Upload } from "lucide-react";
+import { Brain, ArrowLeft, BookOpen, FileText, Trash2, Plus, Upload, BarChart3 } from "lucide-react";
 import { api } from "../../../lib/api";
 import { ThemeToggle } from "../ui/ThemeToggle";
+import { PatternsTab } from "../tabs/PatternsTab";
 
 export function AdminPage() {
   const navigate = useNavigate();
@@ -117,6 +118,13 @@ export function AdminPage() {
           >
             <FileText className="w-5 h-5" /> PYQs
           </button>
+          <button 
+            className={`px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-all ${activeTab === 'patterns' ? 'scale-[1.02]' : 'opacity-70 hover:opacity-100'}`}
+            style={{ background: activeTab === 'patterns' ? 'var(--gradient-primary)' : 'var(--bg-tertiary)', color: activeTab === 'patterns' ? '#fff' : 'var(--text-primary)' }}
+            onClick={() => setActiveTab("patterns")}
+          >
+            <BarChart3 className="w-5 h-5" /> Analytics
+          </button>
         </div>
 
         {error && (
@@ -161,6 +169,12 @@ export function AdminPage() {
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {activeTab === "patterns" && (
+          <div className="animate-fade-up">
+            <PatternsTab books={books} />
           </div>
         )}
 

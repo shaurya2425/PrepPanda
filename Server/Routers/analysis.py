@@ -215,3 +215,57 @@ async def analyse_chapter(
     )
 
     return _report_to_out(report)
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Pattern analysis — chart-ready data
+# ─────────────────────────────────────────────────────────────────────
+
+from dataclasses import asdict
+from Core.Analysis.pattern_analyzer import PatternAnalyzer
+
+_pattern_analyzer: Optional[PatternAnalyzer] = None
+
+
+def _get_pattern_analyzer() -> PatternAnalyzer:
+    global _pattern_analyzer
+    if _pattern_analyzer is None:
+        _pattern_analyzer = PatternAnalyzer()
+    return _pattern_analyzer
+
+
+@router.get(
+    "/books/{book_id}/patterns",
+    summary="Chart-ready PYQ pattern analysis for a book",
+)
+async def book_patterns(
+    book_id: uuid.UUID,
+    pg: PgDep,
+):
+    """Return structured chart data: year trends, chapter heatmaps,
+    marks distribution, topic hotspots, repetition clusters, etc."""
+    book = await pg.get_book(book_id)
+    if not book:
+        raise HTTPException(status_code=404, detail=f"Book {book_id} not found.")
+
+    pa = _get_pattern_analyzer()
+    report = await pa.generate_report(pg, book_id)
+    return asdict(report)
+
+
+@router.get(
+    "/chapters/{chapter_id}/patterns",
+    summary="Chart-ready PYQ pattern analysis for a chapter",
+)
+async def chapter_patterns(
+    chapter_id: uuid.UUID,
+    pg: PgDep,
+):
+    """Same as book-level pattern analysis, scoped to one chapter."""
+    ch = await pg.get_chapter(chapter_id)
+    if not ch:
+        raise HTTPException(status_code=404, detail=f"Chapter {chapter_id} not found.")
+
+    pa = _get_pattern_analyzer()
+    report = await pa.generate_report(pg, ch["book_id"], chapter_id=chapter_id)
+    return asdict(report)

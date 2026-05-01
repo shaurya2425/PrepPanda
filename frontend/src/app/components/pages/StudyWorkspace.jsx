@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useParams } from "react-router";
-import { Brain, ArrowLeft, FileText, MessageSquare, BookOpen, GitBranch, ClipboardCheck, FileQuestion, Loader2 } from "lucide-react";
+import { Brain, ArrowLeft, FileText, MessageSquare, BookOpen, GitBranch, ClipboardCheck, FileQuestion, Loader2, BarChart3 } from "lucide-react";
 import { ThemeToggle } from "../ui/ThemeToggle";
 import { PDFTab } from "../tabs/PDFTab";
 import { NotesTab } from "../tabs/NotesTab";
 import { MindmapTab } from "../tabs/MindmapTab";
 import { QuizTab } from "../tabs/QuizTab";
 import { PYQTab } from "../tabs/PYQTab";
+import { AnalyticsTab } from "../tabs/AnalyticsTab";
 import { api } from "@/lib/api";
 
 const tabs = [
@@ -15,6 +16,7 @@ const tabs = [
   { id: 'mindmap', label: 'Mindmap', icon: GitBranch },
   { id: 'quiz', label: 'Quiz', icon: ClipboardCheck },
   { id: 'pyq', label: 'PYQ', icon: FileQuestion },
+  { id: 'analytics', label: 'Analytics', icon: BarChart3 },
 ];
 
 export function StudyWorkspace() {
@@ -119,6 +121,7 @@ export function StudyWorkspace() {
         {activeTab === 'mindmap' && <MindmapTab title={chapter?.title} chapterId={chapterId} />}
         {activeTab === 'quiz' && <QuizTab title={chapter?.title} chapterId={chapterId} />}
         {activeTab === 'pyq' && <PYQTab title={chapter?.title} chapterId={chapterId} />}
+        {activeTab === 'analytics' && <AnalyticsTab title={chapter?.title} chapterId={chapterId} />}
       </div>
     </div>
   );

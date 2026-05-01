@@ -552,6 +552,24 @@ const analysis = {
   getChapterAnalysis(chapterId, params = {}) {
     return request(`/analysis/chapters/${chapterId}${qs(params)}`);
   },
+
+  /**
+   * Get chart-ready PYQ pattern data for a book.
+   * @param {string} bookId - UUID
+   * @returns {Promise<any>}
+   */
+  getBookPatterns(bookId) {
+    return request(`/analysis/books/${bookId}/patterns`);
+  },
+
+  /**
+   * Get chart-ready PYQ pattern data for a chapter.
+   * @param {string} chapterId - UUID
+   * @returns {Promise<any>}
+   */
+  getChapterPatterns(chapterId) {
+    return request(`/analysis/chapters/${chapterId}/patterns`);
+  },
 };
 
 // ─────────────────────────────────────────────────────────────────────
