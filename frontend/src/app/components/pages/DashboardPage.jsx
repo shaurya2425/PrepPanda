@@ -35,6 +35,19 @@ export function DashboardPage() {
           <div className="flex items-center gap-3">
             <ThemeToggle />
             <Link 
+              to="/admin"
+              className="px-5 py-2.5 rounded-xl text-[15px] font-semibold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+              style={{
+                background: 'var(--bg-tertiary)',
+                color: 'var(--text-primary)',
+                border: '1px solid var(--border)',
+              }}
+            >
+              <span className="flex items-center gap-2">
+                Admin
+              </span>
+            </Link>
+            <Link 
               to="/library"
               className="px-5 py-2.5 rounded-xl text-[15px] font-semibold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
               style={{

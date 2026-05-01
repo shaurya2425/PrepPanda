@@ -17,9 +17,8 @@
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
-// For admin-protected routes.  Store the key in a .env as
-// VITE_ADMIN_API_KEY=<secret>  — never commit it.
-const ADMIN_KEY = import.meta.env.VITE_ADMIN_API_KEY ?? "";
+// Admin auth is stored in localStorage
+
 
 // ─────────────────────────────────────────────────────────────────────
 // Custom error
@@ -113,12 +112,13 @@ async function request(path, opts = {}) {
 
 /**
  * Shorthand for admin-protected requests.
- * Injects the X-Admin-Key header automatically.
+ * Injects the Authorization header automatically.
  */
 function adminRequest(path, opts = {}) {
+  const auth = localStorage.getItem("adminAuth") || "";
   const headers = {
     ...opts.headers,
-    "X-Admin-Key": ADMIN_KEY,
+    "Authorization": `Basic ${auth}`,
   };
   return request(path, { ...opts, headers });
 }
@@ -313,6 +313,16 @@ const books = {
       signal: opts.signal,
     });
   },
+
+  /**
+   * Delete a book
+   * @param {string} bookId
+   */
+  delete(bookId) {
+    return adminRequest(`/admin/books/${bookId}`, {
+      method: "DELETE",
+    });
+  },
 };
 
 // ─────────────────────────────────────────────────────────────────────
@@ -380,6 +390,16 @@ const pyqs = {
     return adminRequest(`/admin/books/${bookId}/pyqs/file`, {
       method: "POST",
       formData: fd,
+    });
+  },
+
+  /**
+   * Delete a PYQ
+   * @param {string} pyqId
+   */
+  delete(pyqId) {
+    return adminRequest(`/admin/pyqs/${pyqId}`, {
+      method: "DELETE",
     });
   },
 };
@@ -538,8 +558,18 @@ const analysis = {
 // Public surface
 // ─────────────────────────────────────────────────────────────────────
 
+const admin = {
+  /**
+   * Verify basic auth credentials.
+   */
+  verify() {
+    return adminRequest("/admin/verify");
+  }
+};
+
 export const api = {
   health,
+  admin,
   catalog,
   books,
   chapters,

@@ -18,10 +18,15 @@ import os
 from typing import Annotated
 
 from fastapi import Depends, Header, HTTPException, Request, status
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
+import secrets
 
 from Core.Parser.embedder import ChunkEmbedder
 from Core.Storage.BucketHandler import BucketHandler
 from Core.Storage.PostgresHandler import PostgresHandler
+
+security = HTTPBasic()
+
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -44,20 +49,15 @@ def get_embedder(request: Request) -> ChunkEmbedder:
 # Admin guard
 # ─────────────────────────────────────────────────────────────────────
 
-_ADMIN_KEY = os.environ.get("ADMIN_API_KEY", "")
-
-
-def require_admin(x_admin_key: Annotated[str | None, Header()] = None) -> None:
-    """Raise 403 if the X-Admin-Key header is missing or wrong."""
-    if not _ADMIN_KEY:
+def require_admin(credentials: Annotated[HTTPBasicCredentials, Depends(security)]) -> None:
+    """Raise 401 if the basic auth credentials are wrong."""
+    correct_username = secrets.compare_digest(credentials.username, "preppanda")
+    correct_password = secrets.compare_digest(credentials.password, "preppass")
+    if not (correct_username and correct_password):
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="ADMIN_API_KEY not configured on the server.",
-        )
-    if x_admin_key != _ADMIN_KEY:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Invalid or missing X-Admin-Key header.",
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Basic"},
         )
 
 

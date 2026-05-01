@@ -5,6 +5,7 @@ import { SignupPage } from "./components/pages/SignupPage";
 import { DashboardPage } from "./components/pages/DashboardPage";
 import { LibraryFlow } from "./components/pages/LibraryFlow";
 import { StudyWorkspace } from "./components/pages/StudyWorkspace";
+import { AdminPage } from "./components/pages/AdminPage";
 
 export const router = createBrowserRouter([
   {
@@ -30,5 +31,9 @@ export const router = createBrowserRouter([
   {
     path: "/study/:chapterId",
     Component: StudyWorkspace,
+  },
+  {
+    path: "/admin",
+    Component: AdminPage,
   },
 ]);

@@ -228,9 +228,20 @@ def parse_pyq_blocks(raw: str) -> List[PYQBlock]:
 # Routes
 # ─────────────────────────────────────────────────────────────────────
 
+# ── Auth Verification ──────────────────────────────────────────────────
+@router.get(
+    "/verify",
+    status_code=status.HTTP_200_OK,
+    summary="Verify admin credentials",
+)
+async def verify_admin(_admin: AdminDep):
+    """Returns 200 OK if credentials are valid."""
+    return {"status": "ok"}
+
 # ── Books ────────────────────────────────────────────────────────────
 
 @router.post(
+
     "/books",
     response_model=BookOut,
     status_code=status.HTTP_201_CREATED,
@@ -248,6 +259,21 @@ async def create_book(
         subject=body.subject,
     )
     return BookOut(**rec)
+
+@router.delete(
+    "/books/{book_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a book",
+)
+async def delete_book(
+    book_id: uuid.UUID,
+    pg: PgDep,
+    _admin: AdminDep,
+):
+    """Delete a book from core.books."""
+    pool = pg._pool_guard()
+    await pool.execute("DELETE FROM core.books WHERE book_id = $1", book_id)
+
 
 
 # ── Ingest Book (one-shot) ────────────────────────────────────────────
@@ -793,3 +819,18 @@ async def _do_ingest_pyqs(
         skipped=skipped,
         pyq_ids=[r["pyq_id"] for r in pyq_records],
     )
+
+@router.delete(
+    "/pyqs/{pyq_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a PYQ",
+)
+async def delete_pyq(
+    pyq_id: uuid.UUID,
+    pg: PgDep,
+    _admin: AdminDep,
+):
+    """Delete a PYQ from core.pyqs."""
+    pool = pg._pool_guard()
+    await pool.execute("DELETE FROM core.pyqs WHERE pyq_id = $1", pyq_id)
+
