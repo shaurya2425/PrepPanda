@@ -126,7 +126,7 @@ class PYQIngestOut(BaseModel):
 #   • Blocks separated by blank lines are fine.
 
 _RE_Q_HEADER = re.compile(
-    r"^---Q\b(.*)?$",
+    r"^---\s*Q\b(.*)?$",
     re.IGNORECASE,
 )
 _RE_ANS_HEADER = re.compile(r"^---Ans\b", re.IGNORECASE)

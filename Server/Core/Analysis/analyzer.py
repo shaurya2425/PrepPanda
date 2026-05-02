@@ -225,7 +225,66 @@ class PYQAnalyzer:
         # Sort by frequency descending, then by total_relevance
         merged.sort(key=lambda z: (z.frequency, z.total_relevance), reverse=True)
 
+        zones_to_fix = []
+        for z in merged:
+            useful = [t for t in z.section_titles if not self._is_useless_title(t)]
+            if useful:
+                z.section_titles = useful
+            else:
+                zones_to_fix.append(z)
+
+        if zones_to_fix:
+            import asyncio
+            await asyncio.to_thread(self._generate_better_titles, zones_to_fix)
+
         return merged, metrics
+
+    def _is_useless_title(self, title: str) -> bool:
+        import re
+        title = title.strip()
+        if not title: return True
+        # Matches "16.", "5.2", "8"
+        if re.match(r"^\d+(\.\d+)*\.?$", title): return True
+        if title.upper() in ["BIOLOGY", "PHYSICS", "CHEMISTRY", "SCIENCE", "MATHS", "MATHEMATICS"]: return True
+        if re.match(r"^(chapter|section|unit|part)\s*\d*", title, re.IGNORECASE): return True
+        return False
+
+    def _generate_better_titles(self, zones: List[TopicZone]) -> None:
+        import os
+        from groq import Groq
+        key = os.environ.get("GROQ_API_KEY")
+        if not key:
+            return
+
+        client = Groq(api_key=key)
+
+        prompt_lines = [
+            "You are an expert textbook editor. Below are excerpts from different textbook sections that have useless numeric or generic titles.",
+            "Please provide a concise, descriptive 2-5 word topic title for each excerpt based on its content.",
+            "Return ONLY a JSON object with the format: {\"titles\": [\"Title 1\", \"Title 2\", ...]} maintaining the exact order.",
+            ""
+        ]
+        for i, z in enumerate(zones):
+            prompt_lines.append(f"Excerpt {i+1}:\n{z.representative_content[:300]}\n")
+
+        prompt = "\n".join(prompt_lines)
+
+        try:
+            resp = client.chat.completions.create(
+                model="llama-3.1-8b-instant",
+                messages=[{"role": "user", "content": prompt}],
+                response_format={"type": "json_object"}
+            )
+            raw = resp.choices[0].message.content
+            import json
+            data = json.loads(raw)
+            titles = data.get("titles", [])
+            for i, title in enumerate(titles):
+                if i < len(zones) and title:
+                    zones[i].section_titles = [title]
+        except Exception as e:
+            logger.warning(f"Failed to generate better zone titles with Groq: {e}")
+
 
     @staticmethod
     def _merge_zones(zones: List[TopicZone]) -> List[TopicZone]:
@@ -354,6 +413,7 @@ class PYQAnalyzer:
         trends: List[TrendItem],
         *,
         top_k: int = 5,
+        concept_graph: Optional[str] = None,
     ) -> List[PredictedQuestion]:
         """Use Gemini to predict likely future exam questions.
 
@@ -379,7 +439,7 @@ class PYQAnalyzer:
         # Take top zones for the prompt (capped to keep prompt manageable)
         prompt_zones = scored[:min(top_k * 2, 10)]
 
-        prompt = self._build_prediction_prompt(prompt_zones, top_k)
+        prompt = self._build_prediction_prompt(prompt_zones, top_k, concept_graph=concept_graph)
 
         # Call Gemini
         try:
@@ -409,6 +469,7 @@ class PYQAnalyzer:
         self,
         scored_zones: List[Tuple[float, TopicZone, Optional[TrendItem]]],
         top_k: int,
+        concept_graph: Optional[str] = None,
     ) -> str:
         """Build a detailed prompt for Gemini question prediction."""
 
@@ -446,6 +507,10 @@ Sample PYQs from this zone:
 """)
 
         zones_text = "\n".join(zone_blocks)
+        
+        cg_text = ""
+        if concept_graph:
+            cg_text = f"Also, here is the CHAPTER CONCEPT GRAPH mapping topics and their structure:\n{concept_graph}\n"
 
         return f"""You are an expert exam question predictor for Indian competitive exams (CBSE, NEET, JEE).
 
@@ -455,6 +520,7 @@ I will give you data about topic zones from a textbook. Each zone represents a c
 - Sample real PYQs from each zone
 - A content excerpt from the textbook for factual grounding
 
+{cg_text}
 Based on this data, predict {top_k} NEW exam questions that are most likely to appear in upcoming exams.
 
 IMPORTANT RULES:
@@ -573,8 +639,19 @@ Respond ONLY with valid JSON in this exact format (no markdown fencing, no extra
         # Step 2: Trend detection
         trends = self.detect_trends(zones)
 
+        # Fetch concept graph if chapter_id is provided
+        concept_graph = None
+        if chapter_id:
+            import json
+            pool = pg._pool_guard()
+            row = await pool.fetchrow("SELECT concept_graph FROM core.chapters WHERE chapter_id = $1", chapter_id)
+            if row and row.get("concept_graph"):
+                concept_graph = row["concept_graph"]
+                if not isinstance(concept_graph, str):
+                    concept_graph = json.dumps(concept_graph)
+
         # Step 3: Question prediction
-        predictions = await self.predict_questions(zones, trends, top_k=top_k)
+        predictions = await self.predict_questions(zones, trends, top_k=top_k, concept_graph=concept_graph)
 
         # Count unique PYQs
         all_pyq_ids: Set[uuid.UUID] = set()

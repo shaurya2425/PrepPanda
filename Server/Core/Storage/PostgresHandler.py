@@ -110,6 +110,20 @@ class PostgresHandler:
             pdf_url,
         )
 
+    async def update_chapter_concept_graph(
+        self,
+        chapter_id: uuid.UUID,
+        concept_graph: Dict[str, Any],
+    ) -> None:
+        """Store the generated JSON concept graph for a chapter."""
+        pool = self._pool_guard()
+        import json
+        await pool.execute(
+            "UPDATE core.chapters SET concept_graph = $2::jsonb WHERE chapter_id = $1",
+            chapter_id,
+            json.dumps(concept_graph),
+        )
+
     # ==========================================================
     # CHUNKS (CORE)
     # ==========================================================

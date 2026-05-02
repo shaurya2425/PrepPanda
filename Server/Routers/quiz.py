@@ -48,8 +48,17 @@ async def generate_quiz(req: GenerateQuizRequest, pg: PgDep):
         if not pyq_chunks and not random_chunks:
             raise HTTPException(status_code=404, detail="No content available for this chapter to generate a quiz.")
 
+        pool = pg._pool_guard()
+        chapter_row = await pool.fetchrow("SELECT concept_graph FROM core.chapters WHERE chapter_id = $1", req.chapter_id)
+        concept_graph = chapter_row["concept_graph"] if chapter_row and chapter_row.get("concept_graph") else None
+
         # Build context
         context_blocks = []
+        if concept_graph:
+            if not isinstance(concept_graph, str):
+                concept_graph = json.dumps(concept_graph)
+            context_blocks.append(f"--- CHAPTER CONCEPT GRAPH (Topic Structure) ---\n{concept_graph}\n")
+
         context_blocks.append("--- PYQ-LINKED TOPICS ---")
         for i, c in enumerate(pyq_chunks, 1):
             pyq_text = c.get("pyq_question") or ""

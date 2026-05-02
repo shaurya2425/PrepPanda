@@ -14,12 +14,14 @@ from __future__ import annotations
 
 import logging
 import uuid
+import os
+import json
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
+from groq import Groq
 
-from Core.Features.MindMap import MindMapBuilder, MindMapNode, SemanticTag
 from Routers.deps import PgDep
 
 logger = logging.getLogger(__name__)
@@ -69,38 +71,17 @@ async def get_mindmap(
     chapter_id: uuid.UUID,
     pg: PgDep,
 ) -> MindMapOut:
-    """
-    Build a hierarchical mind-map from all chunks stored for the given
-    chapter.
-
-    The tree is returned as a nested JSON object with the following node
-    fields:
-    - ``id``         — unique node identifier
-    - ``label``      — display text
-    - ``tag``        — semantic category: ``definition``, ``classification``,
-                       ``steps``, ``comparison``, ``example``,
-                       ``enumeration``, ``figure``, or ``body``
-    - ``depth``      — nesting level (0 = root)
-    - ``detail``     — longer body text (optional)
-    - ``figure_ids`` — list of linked figure IDs (optional)
-    - ``children``   — nested child nodes
-    """
     chapter_row, chunk_rows = await _fetch_chapter_data(pg, chapter_id)
-
     chapter_title = chapter_row["title"]
-    chunk_dicts = [pg._record_to_dict(r) for r in chunk_rows]
 
-    tree: MindMapNode = MindMapBuilder.from_db_chunks(
-        chunk_dicts,
-        root_label=chapter_title,
-    )
+    tree = await _get_or_generate_concept_graph(chapter_id, chapter_row, chunk_rows, pg)
 
     return MindMapOut(
         chapter_id=chapter_id,
         chapter_title=chapter_title,
-        node_count=tree.node_count(),
-        leaf_count=tree.leaf_count(),
-        tree=tree.to_dict(),
+        node_count=_count_nodes(tree),
+        leaf_count=_count_leaves(tree),
+        tree=tree,
     )
 
 
@@ -113,22 +94,10 @@ async def get_mindmap_flat(
     chapter_id: uuid.UUID,
     pg: PgDep,
 ) -> MindMapFlatOut:
-    """
-    Same mind-map data as the nested endpoint, but serialised as a
-    **flat list of nodes** each carrying a ``parent_id``.
-
-    This format is directly usable by React-Flow and similar libraries
-    that expect a flat edge list rather than a recursive tree.
-    """
     chapter_row, chunk_rows = await _fetch_chapter_data(pg, chapter_id)
-
     chapter_title = chapter_row["title"]
-    chunk_dicts = [pg._record_to_dict(r) for r in chunk_rows]
 
-    tree: MindMapNode = MindMapBuilder.from_db_chunks(
-        chunk_dicts,
-        root_label=chapter_title,
-    )
+    tree = await _get_or_generate_concept_graph(chapter_id, chapter_row, chunk_rows, pg)
 
     flat: List[FlatNode] = []
     _flatten(tree, parent_id=None, acc=flat)
@@ -188,13 +157,6 @@ async def get_mindmap_range(
     body: ChunkRangeIn,
     pg: PgDep,
 ) -> MindMapOut:
-    """
-    Build a mind-map from a **subset** of chunks defined by
-    ``position_index`` range ``[start, end]``.
-
-    This lets the frontend request a focused mind-map for a specific
-    section of a chapter instead of the entire chapter.
-    """
     pool = pg._pool_guard()
     chapter_row = await pool.fetchrow(
         "SELECT * FROM core.chapters WHERE chapter_id = $1", chapter_id
@@ -212,20 +174,16 @@ async def get_mindmap_range(
             detail=f"No chunks found in range [{body.start}, {body.end}] for chapter {chapter_id}.",
         )
 
-    chunk_dicts = [pg._record_to_dict(r) if hasattr(r, 'keys') else r for r in chunk_rows]
     chapter_title = chapter_row["title"]
 
-    tree: MindMapNode = MindMapBuilder.from_db_chunks(
-        chunk_dicts,
-        root_label=f"{chapter_title} (chunks {body.start}–{body.end})",
-    )
+    tree = await _get_or_generate_concept_graph(chapter_id, dict(chapter_row), chunk_rows, pg, is_range=True)
 
     return MindMapOut(
         chapter_id=chapter_id,
         chapter_title=chapter_title,
-        node_count=tree.node_count(),
-        leaf_count=tree.leaf_count(),
-        tree=tree.to_dict(),
+        node_count=_count_nodes(tree),
+        leaf_count=_count_leaves(tree),
+        tree=tree,
     )
 
 
@@ -239,10 +197,6 @@ async def get_mindmap_range_flat(
     body: ChunkRangeIn,
     pg: PgDep,
 ) -> MindMapFlatOut:
-    """
-    Same as ``/range`` but returns a flat node list instead of a
-    nested tree.
-    """
     pool = pg._pool_guard()
     chapter_row = await pool.fetchrow(
         "SELECT * FROM core.chapters WHERE chapter_id = $1", chapter_id
@@ -260,13 +214,9 @@ async def get_mindmap_range_flat(
             detail=f"No chunks found in range [{body.start}, {body.end}] for chapter {chapter_id}.",
         )
 
-    chunk_dicts = [pg._record_to_dict(r) if hasattr(r, 'keys') else r for r in chunk_rows]
     chapter_title = chapter_row["title"]
 
-    tree: MindMapNode = MindMapBuilder.from_db_chunks(
-        chunk_dicts,
-        root_label=f"{chapter_title} (chunks {body.start}–{body.end})",
-    )
+    tree = await _get_or_generate_concept_graph(chapter_id, dict(chapter_row), chunk_rows, pg, is_range=True)
 
     flat: List[FlatNode] = []
     _flatten(tree, parent_id=None, acc=flat)
@@ -304,20 +254,86 @@ async def _fetch_chapter_data(pg: PgDep, chapter_id: uuid.UUID):
     return chapter_row, chunk_rows
 
 
+async def _get_or_generate_concept_graph(
+    chapter_id: uuid.UUID,
+    chapter_row: dict,
+    chunk_rows: list,
+    pg: PgDep,
+    is_range: bool = False
+) -> dict:
+    if not is_range and chapter_row.get("concept_graph"):
+        if isinstance(chapter_row["concept_graph"], str):
+            return json.loads(chapter_row["concept_graph"])
+        return chapter_row["concept_graph"]
+
+    context = "\n".join([c["content"] for c in chunk_rows])
+    prompt = f"""You are an expert educational structuralist. 
+Read the following textbook material and construct a comprehensive, hierarchical concept graph (mind map).
+Return ONLY a valid JSON object representing the root node, matching this exact schema recursively:
+{{
+  "id": "unique_string_id",
+  "label": "Short Topic Name",
+  "tag": "definition",
+  "depth": 0,
+  "detail": "A brief 1-2 sentence explanation",
+  "figure_ids": [],
+  "children": [ /* array of child nodes matching this same schema */ ]
+}}
+Tags must be one of: core_concept, definition, classification, steps, comparison, example, enumeration, body.
+The root node must have depth 0, its children depth 1, and so on. Make it highly structured.
+
+Material:
+{context[:20000]}
+"""
+    key = os.environ.get("GROQ_API_KEY")
+    if not key:
+        raise HTTPException(status_code=500, detail="GROQ_API_KEY is not set.")
+
+    client = Groq(api_key=key)
+    completion = client.chat.completions.create(
+        model="llama-3.1-8b-instant",
+        messages=[{"role": "user", "content": prompt}],
+        response_format={"type": "json_object"}
+    )
+    raw = completion.choices[0].message.content
+    try:
+        tree = json.loads(raw)
+    except Exception as e:
+        logger.error(f"Failed to parse Groq concept graph JSON: {e}\nRaw: {raw}")
+        raise HTTPException(status_code=500, detail="Failed to parse concept graph JSON from LLM.")
+
+    if not is_range:
+        await pg.update_chapter_concept_graph(chapter_id, tree)
+
+    return tree
+
+
 def _flatten(
-    node: MindMapNode,
+    node: dict,
     parent_id: Optional[str],
     acc: List[FlatNode],
 ) -> None:
-    """Recursively flatten the tree into acc."""
     acc.append(FlatNode(
-        id=node.id,
+        id=str(node.get("id", str(uuid.uuid4()))),
         parent_id=parent_id,
-        label=node.label,
-        tag=node.tag.name.lower(),
-        depth=node.depth,
-        detail=node.detail or None,
-        figure_ids=node.figure_ids,
+        label=node.get("label", "Unknown"),
+        tag=node.get("tag", "body").lower(),
+        depth=node.get("depth", 0),
+        detail=node.get("detail") or None,
+        figure_ids=node.get("figure_ids", []),
     ))
-    for child in node.children:
-        _flatten(child, parent_id=node.id, acc=acc)
+    node_id = str(node.get("id"))
+    for child in node.get("children", []):
+        _flatten(child, parent_id=node_id, acc=acc)
+
+
+def _count_nodes(node: dict) -> int:
+    return 1 + sum(_count_nodes(c) for c in node.get("children", []))
+
+
+def _count_leaves(node: dict) -> int:
+    children = node.get("children", [])
+    if not children:
+        return 1
+    return sum(_count_leaves(c) for c in children)
+
