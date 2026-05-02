@@ -59,7 +59,20 @@ const CustomNode = ({ data, selected }) => {
         {data.label}
       </div>
 
-      <Handle type="source" position={Position.Bottom} className="w-3 h-3 border-2" style={{ background: color, borderColor: 'var(--bg-primary)' }} />
+      {data.hasChildren && (
+        <button
+          className="absolute -bottom-3 left-1/2 transform -translate-x-1/2 w-5 h-5 rounded-full flex items-center justify-center text-white font-bold text-xs cursor-pointer hover:scale-110 transition-transform z-10 shadow-sm"
+          style={{ background: color, border: '2px solid var(--bg-primary)' }}
+          onClick={(e) => {
+            e.stopPropagation();
+            data.onToggleCollapse(data.id);
+          }}
+        >
+          {data.isCollapsed ? '+' : '−'}
+        </button>
+      )}
+
+      <Handle type="source" position={Position.Bottom} className="w-3 h-3 border-2" style={{ background: color, borderColor: 'var(--bg-primary)', opacity: data.isCollapsed ? 0 : 1 }} />
     </div>
   );
 };
@@ -115,51 +128,100 @@ export function MindmapTab({ title = "this chapter", chapterId }) {
   const [selectedNodeData, setSelectedNodeData] = useState(null);
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(true);
 
+  const [rawNodesData, setRawNodesData] = useState([]);
+  const [collapsedNodes, setCollapsedNodes] = useState(new Set());
+
+  useEffect(() => {
+    if (rawNodesData.length === 0) return;
+
+    const childrenMap = {};
+    rawNodesData.forEach(n => {
+      if (n.parent_id !== null && n.parent_id !== undefined) {
+        const pid = String(n.parent_id);
+        if (!childrenMap[pid]) childrenMap[pid] = [];
+        childrenMap[pid].push(String(n.id));
+      }
+    });
+
+    const visibleNodeIds = new Set();
+    const rootNodes = rawNodesData.filter(n => n.parent_id === null || n.parent_id === undefined);
+    rootNodes.forEach(n => visibleNodeIds.add(String(n.id)));
+
+    const queue = [...rootNodes.map(n => String(n.id))];
+    while (queue.length > 0) {
+      const currentId = queue.shift();
+      if (!collapsedNodes.has(currentId)) {
+        const children = childrenMap[currentId] || [];
+        children.forEach(childId => {
+          visibleNodeIds.add(childId);
+          queue.push(childId);
+        });
+      }
+    }
+
+    const rfNodes = rawNodesData
+      .filter(n => visibleNodeIds.has(String(n.id)))
+      .map(n => {
+        const idStr = String(n.id);
+        const hasChildren = (childrenMap[idStr] || []).length > 0;
+        return {
+          id: idStr,
+          type: "custom",
+          data: {
+            id: idStr,
+            label: n.label,
+            tag: n.tag,
+            depth: n.depth,
+            detail: n.detail,
+            figureCount: n.figure_ids ? n.figure_ids.length : 0,
+            raw: n,
+            hasChildren,
+            isCollapsed: collapsedNodes.has(idStr),
+            onToggleCollapse: (nodeId) => {
+              setCollapsedNodes(prev => {
+                const next = new Set(prev);
+                if (next.has(nodeId)) {
+                  next.delete(nodeId);
+                } else {
+                  next.add(nodeId);
+                }
+                return next;
+              });
+            }
+          },
+          position: { x: 0, y: 0 }
+        };
+      });
+
+    const rfEdges = [];
+    rawNodesData.forEach(n => {
+      if (n.parent_id !== null && n.parent_id !== undefined && visibleNodeIds.has(String(n.id)) && visibleNodeIds.has(String(n.parent_id))) {
+        rfEdges.push({
+          id: `e-${n.parent_id}-${n.id}`,
+          source: String(n.parent_id),
+          target: String(n.id),
+          type: "smoothstep",
+          animated: true,
+          style: { stroke: getStatusColor(n.tag), strokeWidth: 2, opacity: 0.6 }
+        });
+      }
+    });
+
+    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(rfNodes, rfEdges, "TB");
+
+    setNodes(layoutedNodes);
+    setEdges(layoutedEdges);
+  }, [rawNodesData, collapsedNodes, setNodes, setEdges]);
+
   const handleGenerate = async () => {
     setIsGenerating(true);
     setError(null);
     try {
       const data = await api.mindmap.getFlat(chapterId);
       if (data && data.nodes) {
-        // Build React Flow nodes
-        const rfNodes = data.nodes.map((n) => ({
-          id: String(n.id),
-          type: "custom",
-          data: {
-            label: n.label,
-            tag: n.tag,
-            depth: n.depth,
-            detail: n.detail,
-            figureCount: n.figure_ids ? n.figure_ids.length : 0,
-            raw: n
-          },
-          position: { x: 0, y: 0 } // Will be set by dagre
-        }));
-
-        // Build edges
-        const rfEdges = [];
-        data.nodes.forEach((n) => {
-          if (n.parent_id) {
-            rfEdges.push({
-              id: `e-${n.parent_id}-${n.id}`,
-              source: String(n.parent_id),
-              target: String(n.id),
-              type: "smoothstep",
-              animated: true,
-              style: { stroke: getStatusColor(n.tag), strokeWidth: 2, opacity: 0.6 }
-            });
-          }
-        });
-
-        // Apply auto-layout
-        const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
-          rfNodes,
-          rfEdges,
-          "TB"
-        );
-
-        setNodes(layoutedNodes);
-        setEdges(layoutedEdges);
+        setRawNodesData(data.nodes);
+        const allIds = new Set(data.nodes.map(n => String(n.id)));
+        setCollapsedNodes(allIds);
         setIsGenerated(true);
       }
     } catch (err) {

@@ -1,0 +1,706 @@
+===================================================================
+CONSOLIDATED PAST YEAR QUESTIONS (PYQ) - BIOLOGY 2023-2026
+===================================================================
+
+---Q 1 Marks 2 Year 2026
+Mention the parts of human body that get affected by Pneumonia and common cold infections. Write the causative agents of the two diseases.
+---
+---Ans
+* **Pneumonia:** Affects the **alveoli** (air sacs) of the lungs. Causative agents: *Streptococcus pneumoniae* and *Haemophilus influenzae*.
+* **Common Cold:** Affects the **nose and respiratory passage** (but not the lungs). Causative agents: **Rhinoviruses**.
+---
+
+---Q 2 Marks 2 Year 2026
+State the impact of constant mechanical agitation and pumping of air in the aeration tank on the sewage during the biological treatment.
+---
+---Ans
+1.  It allows the **vigorous growth of useful aerobic microbes into flocs** (masses of bacteria associated with fungal filaments).
+2.  These microbes consume the major part of the organic matter in the effluent, significantly **reducing the BOD (Biochemical Oxygen Demand)** of the sewage.
+---
+
+---Q 2 (OR) Marks 2 Year 2026
+(a) Cattle excreta is important source for producing a domestic fuel. Name the fuel and write its main components. (b) Write the biological process that is responsible for the production of this fuel.
+---
+---Ans
+(a) **Fuel:** Biogas (Gobar gas). **Main Components:** Methane (CH₄) - approx 50-70%, Carbon dioxide (CO₂), and traces of Hydrogen sulphide (H₂S).
+(b) **Process:** **Anaerobic digestion/Methanogenesis** carried out by methanogenic bacteria (e.g., *Methanobacterium*).
+---
+
+---Q 3 Marks 2 Year 2026
+(a) Give an example of viral biocontrol agent. (b) Why are they considered to be desirable when an ecologically sensitive area is being treated?
+---
+---Ans
+(a) **Example:** **Baculoviruses** (specifically those belonging to the genus *Nucleopolyhedrovirus*).
+(b) They are desirable because they are **species-specific and narrow-spectrum** insecticidal applications. They have no negative impacts on plants, mammals, birds, fish, or even non-target insects, preserving the ecological balance.
+---
+
+---Q 4 Marks 2 Year 2026
+What is the importance of female Anopheles mosquitoes in the life of a malarial Parasite Plasmodium?
+---
+---Ans
+1.  **Vector:** It acts as the carrier that transmits the infectious stage (sporozoites) from an infected person to a healthy host.
+2.  **Definitive Host:** It is the host where the **sexual stages** (gametocyte fertilization and development) of the *Plasmodium* life cycle occur.
+---
+
+---Q 5 Marks 2 Year 2026
+Study the graph (Population Growth Curves). (a) What is 'Carrying Capacity' in respect of Curve 'B' indicative of? (b) Mention the action of possible natural forces that could have lead to curve 'B'.
+---
+---Ans
+(a) **Carrying Capacity (K):** Represents the maximum number of individuals of a population that a given habitat can support with its limited resources.
+(b) **Natural Forces:** Limited resource availability (food and space), **competition** between individuals, predation, and disease. These act as "environmental resistance" to keep the growth logistic.
+---
+
+---Q 6 (OR) Marks 2 Year 2026
+"Stability of community depends upon its species richness." How did David Tilman show this experimentally?
+---
+---Ans
+David Tilman's long-term ecosystem experiments using outdoor plots showed:
+1.  Plots with **more species** showed less year-to-year variation in total biomass.
+2.  Increased diversity contributed to **higher productivity**, proving that species richness is critical for community stability and resilience.
+---
+
+---Q 7 Marks 3 Year 2026
+Identify the location of countries in climatic regions based on species richness and explain the pattern.
+---
+---Ans
+(i) **Locations:**
+* Panama (560 species): **Tropical region** (near the equator).
+* Canada (301 species): **Temperate region**.
+* Denmark (67 species): **Polar/High latitude region**.
+(ii) **Term:** **Latitudinal Gradient**.
+**Reason:** Diversity decreases as we move away from the equator towards the poles. Tropics have remained relatively undisturbed for millions of years, allowing more time for speciation, and receive more solar energy, contributing to higher productivity.
+---
+
+---Q 8 Marks 3 Year 2026
+(a) How many episodes of mass extinctions have taken place? (b) How is current episode different?
+---
+---Ans
+(a) **Five episodes** of mass extinction have occurred; the **sixth extinction** is currently in progress.
+(b) The current episode is different because the **rate of extinction** is estimated to be 100 to 1,000 times faster than pre-human times. It is **anthropogenic** (caused by human activities like habitat fragmentation) rather than due to slow geological/natural changes.
+---
+
+---Q 9 Marks 3 Year 2026
+Name two naturally occurring sources that transfer pathogenic genes into plant/animal cells and their biotech use.
+---
+---Ans
+* **Plant source:** *Agrobacterium tumefaciens* (delivers 'T-DNA' to transform plant cells).
+* **Animal source:** **Retroviruses** (transform normal cells into cancerous cells).
+* **Biotech Use:** These have been "disarmed" and are now used as **cloning vectors** to deliver desirable genes into host organisms (e.g., creating Bt crops or in human gene therapy).
+---
+
+---Q 10 Marks 3 Year 2026
+Enumerate the main sources of bio-fertilisers giving one example of each.
+---
+---Ans
+1.  **Bacteria:** e.g., *Rhizobium* (symbiotic) or *Azotobacter* (free-living).
+2.  **Fungi:** e.g., *Glomus* (forming Mycorrhiza which helps in phosphorus absorption).
+3.  **Cyanobacteria:** e.g., *Anabaena* or *Nostoc* (important in paddy fields).
+---
+
+---Q 11 Marks 3 Year 2026
+Explain reason the action plan followed by organic farmers regarding biodiversity.
+---
+---Ans
+Organic farmers avoid systemic chemicals, believing that **diversity creates a system of checks and balances**. Their action plan involves:
+1.  **Biocontrol:** Using natural predators/parasites instead of pesticides to manage pest populations.
+2.  **Sustainability:** Keeping "pests" at manageable levels rather than eradicating them, as they serve as food for beneficial predatory insects.
+---
+
+---Q 12 Marks 3 Year 2026
+(i) Role of selectable marker. (ii) Name one for E.coli. (iii) Why useful?
+---
+---Ans
+(i) It helps in **identifying and eliminating non-transformants** and selectively permitting the growth of the transformants.
+(ii) **Ampicillin resistance gene** (ampR).
+(iii) It is useful because normal *E. coli* cells do not carry resistance against antibiotics; hence, only those that have taken up the plasmid will survive on an ampicillin-containing medium.
+---
+
+---Q 13 Marks 5 Year 2026
+Case Study: Bt corn and corn borers (A, B, C).
+---
+---Ans
+(i) **Species A.** Reason: The graph shows the most drastic reduction in leaf area damage (from approx 80 mm² in Non-Bt to approx 10 mm² in Bt crop), indicating the toxin is highly effective against this species.
+(ii) **Species C.** It shows the least percentage reduction in damage compared to A and B, suggesting it is more resistant to the Bt toxin.
+(iii) **Advice:** Since species B still causes significant damage (approx 20 mm²) to the Bt crop, the farmer should use an **Integrated Pest Management (IPM)** approach, perhaps combining this variety with another Bt trait or localized biocontrol agents.
+(iv) **cryIAb** (controls corn borer).
+(v) **OR - Steps for Isolation/Amplification:**
+1.  **Isolation:** Treat fungal cells with **Chitinase** to break the wall, then use Protease/RNase and chilled ethanol to precipitate pure DNA.
+2.  **Amplification:** Use **PCR (Polymerase Chain Reaction)** involving three steps: Denaturation, Primer Annealing, and Extension using *Taq* Polymerase.
+---
+
+===================================================================
+2023 BIOLOGY QUESTIONS
+===================================================================
+
+---Q 1 Marks 1 Year 2023
+The RNA triplet UAG acts as a stop codon. In which position will insertion of thymine terminate translation?
+---
+---Ans
+Correct Option: (C)
+---
+
+---Q 2 Marks 1 Year 2023
+Which condition correctly describes sex determination?
+---
+---Ans
+Correct Option: (B)
+---
+
+---Q 3 Marks 1 Year 2023
+Which is not a product of transgenic experiments?
+---
+---Ans
+Correct Option: (C)
+---
+
+---Q 4 Marks 1 Year 2023
+Penetration of sperm into ovum is followed by:
+---
+---Ans
+Correct Option: (B)
+---
+
+---Q 5 Marks 1 Year 2023
+India's share in species diversity is:
+---
+---Ans
+Correct Option: (B)
+---
+
+---Q 6 Marks 1 Year 2023
+Select the correct match:
+---
+---Ans
+Correct Option: (B)
+---
+
+---Q 7 Marks 1 Year 2023
+Find allele frequency of P and p.
+---
+---Ans
+Correct Option: (A)
+---
+
+---Q 8 Marks 1 Year 2023
+Match drugs with their effects.
+---
+---Ans
+Correct Option: (B)
+---
+
+---Q 9 Marks 1 Year 2023
+Gynoecium of Michelia:
+---
+---Ans
+Correct Option: (A)
+---
+
+---Q 10 Marks 1 Year 2023
+Identify food chain types P and Q.
+---
+---Ans
+Correct Option: (B)
+---
+
+---Q 11 Marks 1 Year 2023
+Identify incorrect statement regarding PCR.
+---
+---Ans
+Correct Option: (D)
+---
+
+---Q 12 Marks 1 Year 2023
+Correct statement about drugs and tobacco.
+---
+---Ans
+Correct Option: (D)
+---
+
+---Q 13 Marks 1 Year 2023
+Assertion-Reason (Haemophilia)
+---
+---Ans
+Correct Option: (A)
+---
+
+---Q 14 Marks 1 Year 2023
+Assertion-Reason (Biotechnology)
+---
+---Ans
+Correct Option: (A)
+---
+
+---Q 15 Marks 1 Year 2023
+Assertion-Reason (DNA replication)
+---
+---Ans
+Correct Option: (A)
+---
+
+---Q 16 Marks 1 Year 2023
+Assertion-Reason (Swiss cheese)
+---
+---Ans
+Correct Option: (D)
+---
+
+---Q 17 Marks 2 Year 2023
+How is DNA isolated from bacterial cells?
+---
+---Ans
+DNA isolation involves:
+* Cell lysis using enzymes/chemicals to break cell wall
+* Removal of proteins using proteases
+* Precipitation of DNA using cold alcohol
+* Purified DNA obtained as strands
+---
+
+---Q 18 Marks 2 Year 2023
+Human evolution stages
+---
+---Ans
+* (a) Dryopithecus / Ramapithecus
+* (b) East Africa (Ethiopia / Tanzania)
+* (c) Australopithecus
+* (d) Homo habilis
+---
+
+---Q 19 Marks 2 Year 2023
+Identify disorder from karyotype
+---
+---Ans
+* Disorder: Down Syndrome
+* Symptoms: Intellectual disability, flat face, short stature
+* Cause: Trisomy of chromosome 21
+---
+
+---Q 20 Marks 2 Year 2023
+Role of fungus as biofertilizer
+---
+---Ans
+* Increases nutrient availability (especially phosphorus)
+* Improves soil fertility
+* Enhances plant growth
+* Forms mycorrhizal association
+---
+
+---Q 21 Marks 2 Year 2023
+Why women cannot conceive after 50 years?
+---
+---Ans
+* Menopause occurs
+* Ovarian follicle depletion
+* No ovulation
+* Hormonal imbalance
+---
+
+---Q 22 Marks 3 Year 2023
+Gene therapy in ADA deficiency
+---
+---Ans
+* ADA deficiency causes immune disorder
+* Functional ADA gene inserted into lymphocytes
+* Cells returned to patient
+Explanation:
+* Not permanent as cells have short life
+* Permanent cure: Gene inserted into stem cells
+---
+
+---Q 23 Marks 3 Year 2023
+Food chains in ecosystems
+---
+---Ans
+* Aquatic → Grazing food chain
+* Terrestrial → Detritus food chain
+Differences:
+* Energy flow direct vs indirect
+* Producers differ (phytoplankton vs plants)
+---
+
+---Q 24 Marks 3 Year 2023
+Transcription unit
+---
+---Ans
+* Components: Promoter, Structural gene, Terminator
+* Template strand used
+Enzyme:
+* RNA polymerase
+---
+
+---Q 25 Marks 3 Year 2023
+Birth control methods
+---
+---Ans
+* Oral pills: Easy, reversible but require regular use
+* Surgical: Permanent, effective
+IUD Action:
+* Prevent fertilization
+* Inhibit sperm motility
+---
+
+---Q 26 Marks 3 Year 2023
+Adaptive radiation
+---
+---Ans
+* Evolution of different species from common ancestor
+* Occurs due to different ecological niches
+Example: Darwin's finches
+---
+
+---Q 27 Marks 3 Year 2023
+Transgenic animals
+---
+---Ans
+* Animals with inserted foreign genes
+Uses:
+* Vaccine safety testing
+* Production of proteins (e.g., insulin)
+---
+
+---Q 28 Marks 3 Year 2023
+Disease identification
+---
+---Ans
+* Typhoid → High fever, abdominal pain
+* Pneumonia → Chest pain, breathing difficulty
+* Malaria → Cyclic fever, chills
+---
+
+---Q 29 Marks 4 Year 2023
+Sewage treatment plant
+---
+---Ans
+* Diagram: Activated sludge process
+* Importance: Wastewater treatment
+Explanation:
+* Air supplied for aerobic microbes
+* Settling tank forms sludge
+Additional:
+* BOD decreases as organic matter reduces
+---
+
+---Q 30 Marks 4 Year 2023
+Pollination
+---
+---Ans
+* A → Self-pollination
+* B → Cross-pollination
+Conditions:
+* Presence of pollinating agents
+* Synchronization of flowering
+Advantage: Genetic variation
+Disadvantage: Dependence on agents
+---
+
+---Q 31 Marks 5 Year 2023
+Biodiversity loss
+---
+---Ans
+* Alien species compete with natives
+* Cause extinction
+Examples:
+* Nile perch → Fish extinction
+* Lantana → Weed spread
+* Clarias → Native fish decline
+Hotspots:
+* Regions with high endemism
+* Example: Western Ghats, Himalayas
+---
+
+---Q 32 Marks 5 Year 2023
+Fertilization in angiosperms
+---
+---Ans
+* Pollen germination on stigma
+* Pollen tube formation
+* Entry into ovule
+Explanation:
+* Double fertilization occurs
+* One forms zygote, other endosperm
+---
+
+---Q 33 Marks 5 Year 2023
+Genetic material
+---
+---Ans
+* Must replicate
+* Must store information
+* Must mutate
+Conclusion:
+* DNA is ideal genetic material due to stability and replication ability
+---
+
+===================================================================
+ADDITIONAL QUESTIONS FROM VARIOUS YEARS
+===================================================================
+
+---Q 1 Marks 1 Year 2024
+pBR322 is used as a vector in E. coli.
+---
+---Ans
+Correct Option: (B) Modified bacterial plasmid
+---
+
+---Q 2 Marks 1 Year 2024
+Disruptive selection result
+---
+---Ans
+Correct Option: (C)
+---
+
+---Q 3 Marks 1 Year 2024
+Incorrect match in immune system
+---
+---Ans
+Correct Option: (B) Macrophages – mucus secreting cells
+---
+
+---Q 4 Marks 1 Year 2024
+Product of oogenesis
+---
+---Ans
+Correct Option: (B) Larger haploid secondary oocyte + smaller polar body
+---
+
+---Q 5 Marks 1 Year 2024
+F1 phenotype after GA treatment
+---
+---Ans
+Correct Option: (A) All tall
+---
+
+---Q 6 Marks 1 Year 2024
+Correct match
+---
+---Ans
+Correct Option: (B) ELISA – Antigen-antibody interaction
+---
+
+---Q 7 Marks 1 Year 2024
+Correct statement (drugs)
+---
+---Ans
+Correct Option: (D) Morphine used as painkiller
+---
+
+---Q 8 Marks 1 Year 2024
+India species diversity
+---
+---Ans
+Correct Option: (A) 8.1%
+---
+
+---Q 9 Marks 1 Year 2024
+Biocontrol agent
+---
+---Ans
+Correct Option: (C) Bacillus thuringiensis
+---
+
+---Q 10 Marks 1 Year 2024
+Correct trophic levels
+---
+---Ans
+Correct Option: (A)
+---
+
+---Q 11 Marks 1 Year 2024
+Minisatellites
+---
+---Ans
+Correct Option: (C) Non-coding repetitive DNA
+---
+
+---Q 12 Marks 1 Year 2024
+Gynoecium of Michelia
+---
+---Ans
+Correct Option: (A) Multicarpellary, apocarpous
+---
+
+---Q 13 Marks 1 Year 2024
+Assertion-Reason
+---
+---Ans
+Correct Option: (A)
+---
+
+---Q 14 Marks 1 Year 2024
+Assertion-Reason
+---
+---Ans
+Correct Option: (C)
+---
+
+---Q 15 Marks 1 Year 2024
+Assertion-Reason
+---
+---Ans
+Correct Option: (D)
+---
+
+---Q 16 Marks 1 Year 2024
+Assertion-Reason
+---
+---Ans
+Correct Option: (A)
+---
+
+---Q 17 Marks 2 Year 2024
+Bt cotton technique
+---
+---Ans
+* Bt gene inserted into cotton
+* Produces Cry toxin → kills insect gut cells
+---
+
+---Q 18 Marks 2 Year 2024
+Vaccination response
+---
+---Ans
+* Produces antibodies + memory cells
+* Provides long-term immunity
+---
+
+---Q 19 Marks 2 Year 2024
+(i) Menopause → no ovulation
+(ii) Polar bodies ensure cytoplasm concentration
+---
+---Ans
+Key Points:
+* Menopause stops ovulation due to hormone depletion
+* Polar bodies distribute cytoplasm for zygote viability
+---
+
+---Q 20 Marks 2 Year 2024
+Human evolution sequence
+---
+---Ans
+(a) Dryopithecus
+(b) Ethiopia
+(c) Australopithecus
+(d) Homo habilis
+---
+
+---Q 21 Marks 2 Year 2024
+Drosophila melanogaster study model
+---
+---Ans
+(a) Drosophila melanogaster
+(b) Short life cycle, many offspring
+---
+
+---Q 22 Marks 3 Year 2024
+Food chains
+---
+---Ans
+* Aquatic → Grazing food chain
+* Terrestrial → Detritus food chain
+Differences:
+1. Starting point: producers vs dead matter
+2. Energy flow higher in grazing
+---
+
+---Q 23 Marks 3 Year 2024
+Nematode-resistant plants
+---
+---Ans
+* Technique: RNA interference (RNAi)
+* dsRNA blocks mRNA → no protein synthesis → nematode dies
+---
+
+---Q 24 Marks 3 Year 2024
+DNA base sequence
+---
+---Ans
+(a) Complementary: ATCGTACTA
+(b) Hydrogen bonds
+(c) A=T, G≡C → Watson & Crick
+---
+
+---Q 25 Marks 3 Year 2024
+Birth control
+---
+---Ans
+(a) Pills: easy but hormonal side effects; Surgery: permanent
+(b) IUD: Copper toxic to sperm; Prevents fertilisation
+---
+
+---Q 26 Marks 3 Year 2024
+Micropropagation
+---
+---Ans
+(a) Rapid multiplication, disease-free
+(b) Tissue culture in lab
+(c) Banana, potato
+---
+
+---Q 27 Marks 3 Year 2024
+Adaptive radiation
+---
+---Ans
+(a) Evolution from common ancestor
+(b) Example: Darwin finches
+Type: Divergent evolution
+---
+
+---Q 28 Marks 3 Year 2024
+Disease symptoms
+---
+---Ans
+* Typhoid: prolonged fever
+* Pneumonia: breathing issues
+* Malaria: periodic fever
+---
+
+---Q 29 Marks 4 Year 2024
+Pollination mechanisms
+---
+---Ans
+(a) A: Self-pollination, B: Cross-pollination
+(b) Conditions: Pollinating agents, Synchronisation
+(c) Advantage: variation; Disadvantage: pollen wastage
+---
+
+---Q 30 Marks 4 Year 2024
+Sewage treatment process
+---
+---Ans
+(a) Activated sludge process
+(b) Air supplied → microbes grow → degrade organic matter
+(c) (i) Sludge settles OR (ii) High BOD = more pollution
+---
+
+---Q 31 Marks 5 Year 2024
+Test cross & haemophilia
+---
+---Ans
+(i) Test cross: dominant × recessive → determines genotype
+(ii) Females rarely haemophilic (XX); Need both X affected
+Condition: Father haemophilic + mother carrier
+Effect: delayed clotting
+---
+
+---Q 32 Marks 5 Year 2024
+Biodiversity loss
+---
+---Ans
+(i) Alien species outcompete natives
+Examples: Nile perch → fish extinction; Lantana → invasive weed
+(ii) Hotspots: high endemism + threat
+India: Western Ghats, Himalayas
+---
+
+---Q 33 Marks 5 Year 2024
+Logistic growth
+---
+---Ans
+(i) Logistic growth equation with carrying capacity
+(ii) S-shaped curve
+(iii) J-shaped vs S-shaped comparison
+(iv) Logistic is realistic due to limited resources
+---
+
+===================================================================
+END OF CONSOLIDATED PYQ FILE
+===================================================================

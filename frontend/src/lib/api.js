@@ -573,6 +573,31 @@ const analysis = {
 };
 
 // ─────────────────────────────────────────────────────────────────────
+// API — Quiz
+// ─────────────────────────────────────────────────────────────────────
+
+const quiz = {
+  /**
+   * Generate an MCQ quiz for a chapter.
+   *
+   * @param {string} chapterId - UUID
+   * @returns {Promise<Array<{
+   *   id: number,
+   *   question: string,
+   *   options: string[],
+   *   correct: number,
+   *   explanation: string
+   * }>>}
+   */
+  generate(chapterId) {
+    return request("/quiz/generate", {
+      method: "POST",
+      json: { chapter_id: chapterId },
+    });
+  },
+};
+
+// ─────────────────────────────────────────────────────────────────────
 // Public surface
 // ─────────────────────────────────────────────────────────────────────
 
@@ -595,6 +620,7 @@ export const api = {
   srs,
   mindmap,
   analysis,
+  quiz,
 };
 
 export default api;

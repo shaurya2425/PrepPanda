@@ -713,3 +713,78 @@ class PostgresHandler:
             *params,
         )
         return [self._record_to_dict(r) for r in rows]
+
+    # ==========================================================
+    # QUIZ — data for quiz generation
+    # ==========================================================
+
+    async def get_pyq_linked_chunks(
+        self,
+        chapter_id: uuid.UUID,
+        limit: int = 10,
+    ) -> List[Dict[str, Any]]:
+        """Fetch chunks linked to PYQs for a chapter, with the PYQ text.
+
+        Returns rows with: chunk content, section_title, pyq question, relevance.
+        Ordered by relevance descending.
+        """
+        pool = self._pool_guard()
+        rows = await pool.fetch(
+            """
+            SELECT c.chunk_id,
+                   c.content,
+                   c.section_title,
+                   c.position_index,
+                   p.question AS pyq_question,
+                   p.answer   AS pyq_answer,
+                   p.year     AS pyq_year,
+                   p.exam     AS pyq_exam,
+                   pcm.relevance
+            FROM core.pyq_chunk_map pcm
+            JOIN core.chunks c  ON c.chunk_id  = pcm.chunk_id
+            JOIN core.pyqs   p  ON p.pyq_id    = pcm.pyq_id
+            WHERE c.chapter_id = $1
+            ORDER BY pcm.relevance DESC
+            LIMIT $2
+            """,
+            chapter_id,
+            limit,
+        )
+        return [self._record_to_dict(r) for r in rows]
+
+    async def get_random_chunks(
+        self,
+        chapter_id: uuid.UUID,
+        limit: int = 5,
+        exclude_ids: Optional[List[uuid.UUID]] = None,
+    ) -> List[Dict[str, Any]]:
+        """Fetch random chunks from a chapter, excluding specified IDs."""
+        pool = self._pool_guard()
+
+        if exclude_ids:
+            rows = await pool.fetch(
+                """
+                SELECT chunk_id, content, section_title, position_index
+                FROM core.chunks
+                WHERE chapter_id = $1
+                  AND chunk_id != ALL($2::uuid[])
+                ORDER BY RANDOM()
+                LIMIT $3
+                """,
+                chapter_id,
+                exclude_ids,
+                limit,
+            )
+        else:
+            rows = await pool.fetch(
+                """
+                SELECT chunk_id, content, section_title, position_index
+                FROM core.chunks
+                WHERE chapter_id = $1
+                ORDER BY RANDOM()
+                LIMIT $2
+                """,
+                chapter_id,
+                limit,
+            )
+        return [self._record_to_dict(r) for r in rows]

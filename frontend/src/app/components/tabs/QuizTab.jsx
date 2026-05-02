@@ -1,37 +1,14 @@
 import { useState } from "react";
 import { CheckCircle2, XCircle, ArrowRight, Sparkles, Loader2 } from "lucide-react";
 
-const quizData = [
-  {
-    id: 1,
-    question: "What is the balanced equation for the combustion of methane (CH₄)?",
-    options: [
-      "CH₄ + O₂ → CO₂ + H₂O",
-      "CH₄ + 2O₂ → CO₂ + 2H₂O",
-      "CH₄ + O₂ → CO + 2H₂O",
-      "2CH₄ + 3O₂ → 2CO₂ + 4H₂O"
-    ],
-    correct: 1,
-    explanation: "The balanced equation is CH₄ + 2O₂ → CO₂ + 2H₂O. This ensures equal numbers of each type of atom on both sides."
-  },
-  {
-    id: 2,
-    question: "Which type involves the exchange of ions between two compounds?",
-    options: [
-      "Combination reaction",
-      "Decomposition reaction",
-      "Double displacement reaction",
-      "Redox reaction"
-    ],
-    correct: 2,
-    explanation: "A double displacement reaction involves the exchange of ions between two compounds."
-  },
-];
+import { api } from "@/lib/api";
 
-export function QuizTab({ title = 'this chapter' }) {
+export function QuizTab({ title = 'this chapter', chapterId }) {
   const [isGenerated, setIsGenerated] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [error, setError] = useState(null);
 
+  const [quizData, setQuizData] = useState([]);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
   const [showResult, setShowResult] = useState(false);
@@ -39,12 +16,23 @@ export function QuizTab({ title = 'this chapter' }) {
 
   const question = quizData[currentQuestion];
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     setIsGenerating(true);
-    setTimeout(() => {
+    setError(null);
+    try {
+      const data = await api.quiz.generate(chapterId);
+      if (data && data.length > 0) {
+        setQuizData(data);
+        setIsGenerated(true);
+      } else {
+        setError("Could not generate quiz from available content.");
+      }
+    } catch (err) {
+      console.error("Quiz generation failed:", err);
+      setError("Failed to generate quiz. Please make sure the chapter has been fully ingested.");
+    } finally {
       setIsGenerating(false);
-      setIsGenerated(true);
-    }, 2000);
+    }
   };
 
   if (!isGenerated) {
@@ -58,7 +46,14 @@ export function QuizTab({ title = 'this chapter' }) {
           <p className="text-[17px] mb-8 leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
             Let AI create a custom quiz to test your mastery of <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>{title}</span>.
           </p>
-          <button 
+          
+          {error && (
+            <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-sm font-medium">
+              {error}
+            </div>
+          )}
+
+          <button  
             onClick={handleGenerate} disabled={isGenerating}
             className="w-full h-14 rounded-2xl text-[17px] font-bold flex items-center justify-center gap-2 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
             style={{ background: 'var(--gradient-primary)', color: '#FFFFFF', boxShadow: 'var(--shadow-glow)' }}>
