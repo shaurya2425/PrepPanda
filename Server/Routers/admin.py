@@ -1,6 +1,7 @@
 """Admin router — protected data-ingestion endpoints.
 
-All routes require the ``X-Admin-Key`` header to match ``ADMIN_API_KEY``.
+Most routes require the ``X-Admin-Key`` header to match ``ADMIN_API_KEY``.
+The `/admin/ingest-book` endpoint is intentionally open and does not require admin auth.
 
 Endpoints
 ---------
@@ -318,7 +319,6 @@ async def ingest_book(
     pg: PgDep,
     bucket: BucketDep,
     embedder: EmbedDep,
-    _admin: AdminDep,
 ) -> IngestBookOut:
     """
     **One-shot book ingestion.**
