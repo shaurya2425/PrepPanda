@@ -1,0 +1,223 @@
+@startuml PrepPanda_Activity_Diagram
+
+skinparam shadowing false
+title PrepPanda — Activity Diagrams
+
+|#LightBlue| Admin |
+|#LightGreen| System Backend |
+|#LightYellow| Database / Storage |
+|#LightPink| Student |
+
+' ═══════════════════════════════════════════
+' ACTIVITY 1: Chapter Ingestion Pipeline
+' ═══════════════════════════════════════════
+
+start
+:__**Activity 1: Chapter Ingestion Pipeline**__;
+
+|Admin|
+:Upload PDF with chapter metadata
+(chapter_number, chapter_title);
+
+|System Backend|
+:Validate admin credentials
+(Basic HTTP Auth);
+if (Authenticated?) then (yes)
+else (no)
+  :Return 401 Unauthorized;
+  stop
+endif
+
+:Create chapter row in PostgreSQL;
+
+|Database / Storage|
+:INSERT INTO core.chapters
+→ chapter_id (UUID);
+
+|System Backend|
+:Upload raw PDF to MinIO bucket;
+
+|Database / Storage|
+:Store PDF at uploads/chapters/{id}.pdf
+→ pdf_url;
+
+|System Backend|
+fork
+  :Run **NodeParser** (text extraction);
+  :Extract text via PyMuPDF (layout mode);
+  :Detect NCERT headings (regex patterns);
+  :Chunk text at heading boundaries;
+
+  if (Chunk > 550 words?) then (yes)
+    :Split at sentence boundaries
+    using spaCy (en_core_web_sm);
+  else (no)
+  endif
+
+  if (Chunk < 20 chars?) then (yes)
+    :Discard undersized chunk;
+  else (no)
+    :Create TextChunk with
+    section_path & figure_refs;
+  endif
+
+fork again
+  :Run **VisualParser** (image extraction);
+  :Extract page elements (dict mode);
+  :Classify text blocks
+  (HEADING / CAPTION / CONTEXT / QUESTION / BODY);
+  :Find captions → associate nearest image ABOVE;
+  :Render images at 2× upscale via pixmap;
+
+  if (Image blank or too small?) then (yes)
+    :Discard image;
+  else (no)
+    :Group side-by-side images (Y-overlap > 50%);
+    :Deduplicate by xref + content hash;
+  endif
+end fork
+
+:Upload extracted images to MinIO;
+:Store image records in core.images;
+:Store text chunks in core.chunks;
+
+:Match chunk figure_refs → image captions;
+:Create chunk_image_links (M:N);
+
+:Encode all chunks via all-mpnet-base-v2
+(batch → ndarray[N × 768]);
+
+|Database / Storage|
+:UPDATE core.chunks SET embedding = vector
+for each chunk;
+
+|System Backend|
+:Return IngestResult
+{chunks, images, links};
+
+|Admin|
+:View ingestion summary;
+stop
+
+' ═══════════════════════════════════════════
+
+|#LightPink| Student |
+
+' ═══════════════════════════════════════════
+' ACTIVITY 2: SRS Q&A Pipeline
+' ═══════════════════════════════════════════
+
+start
+:__**Activity 2: Smart Retrieval Q&A**__;
+
+|Student|
+:Enter question in Notes tab
+e.g. "What is double fertilisation?";
+
+|System Backend|
+:Normalise query
+(remove stopwords, lowercase);
+:Encode query → 768-dim vector
+(all-mpnet-base-v2);
+
+fork
+  :Semantic Search via HNSW index
+  (cosine similarity, pool = 30);
+fork again
+  :Keyword Search via GIN index
+  (BM25 ts_rank_cd, pool = 30);
+end fork
+
+:Min-max normalise each score set;
+:Compute hybrid score =
+0.7 × semantic + 0.3 × keyword;
+:Select top-10 chunks by hybrid score;
+
+:Expand with ±1 neighbour chunks
+(context continuity);
+:Sort all chunks by position_index
+(reading order);
+:Fetch linked images from
+chunk_image_links;
+
+:Build structured LLM prompt:
+  - System prompt (NCERT tutor rules)
+  - Context chunks (numbered)
+  - Figures with {{IMG:X.X}} tags
+  - Student question;
+
+:Call Gemini API
+(gemini-3-flash-preview, temp=0.3);
+
+if (LLM response OK?) then (yes)
+  :Replace {{IMG:X.X}} placeholders
+  with real MinIO image URLs;
+  :Return Markdown answer
+  with embedded figures;
+else (no)
+  :Return error message;
+endif
+
+|Student|
+:View AI-generated answer
+rendered as rich Markdown
+with inline figures;
+stop
+
+' ═══════════════════════════════════════════
+' ACTIVITY 3: PYQ Analysis Pipeline
+' ═══════════════════════════════════════════
+
+start
+:__**Activity 3: PYQ Analysis**__;
+
+|Student|
+:Open PYQ Analytics tab;
+
+|System Backend|
+:Fetch all PYQ → chunk mappings
+from pyq_chunk_map;
+
+:Group mappings by chapter;
+:Create raw zones (±2 radius
+around each hit position_index);
+
+:Merge overlapping zones
+within same chapter
+(stack-based interval merge);
+
+:Count distinct PYQ frequency per zone;
+:Extract section titles for zones;
+
+if (Zone has non-descriptive title?) then (yes)
+  :Call Groq LLaMA to generate
+  meaningful zone title from content;
+else (no)
+endif
+
+:Detect trends per zone:
+  - Rising (recent 2 years, high recency)
+  - Declining (last asked 3+ years ago)
+  - Consistent (spread across years)
+  - One-shot (single year only);
+
+:Compute composite_score =
+freq × (0.5 + recency_weight);
+
+:Select top-K zones by composite_score;
+
+:Call Gemini API for question prediction:
+  - Input: zone content + trend data
+  - Output: predicted questions with
+    marks, difficulty, confidence,
+    reasoning, source traceability;
+
+:Assemble AnalysisReport
+{zones, trends, predictions};
+
+|Student|
+:View zone cards with frequency badges,
+trend arrows, and predicted questions;
+stop
+
+@enduml

@@ -1,0 +1,195 @@
+@startuml PrepPanda_Sequence_Diagram
+
+skinparam shadowing false
+title PrepPanda — Key Sequence Flows
+
+' ═══════════════════════════════════════════
+' FLOW 1: Chapter Ingestion (Admin)
+' ═══════════════════════════════════════════
+
+== Flow 1: Chapter PDF Ingestion ==
+
+actor Admin
+participant "AdminRouter\n(FastAPI)" as AR
+participant "ChapterPipeline" as CP
+participant "NodeParser" as NP
+participant "VisualParser" as VP
+participant "ChunkEmbedder" as CE
+participant "PostgresHandler" as PG
+participant "BucketHandler\n(MinIO)" as BH
+
+Admin -> AR: POST /admin/books/{id}/chapters\n(pdf, chapter_number, chapter_title)
+activate AR
+
+AR -> CP: ingest(book_id, chapter_num, title, pdf_bytes)
+activate CP
+
+CP -> PG: create_chapter(book_id, num, title)
+PG --> CP: chapter_id (UUID)
+
+CP -> BH: upload_pdf(chapter_id, pdf_bytes)
+BH --> CP: pdf_url
+
+CP -> NP: parse(pdf_path)
+activate NP
+NP -> NP: extract text (PyMuPDF)
+NP -> NP: detect headings (regex)
+NP -> NP: chunk at heading boundaries
+NP -> NP: split oversized chunks (spaCy)
+NP -> NP: extract figure references
+NP --> CP: list[TextChunk]
+deactivate NP
+
+CP -> VP: parse(pdf_path)
+activate VP
+VP -> VP: extract page elements (dict mode)
+VP -> VP: classify text blocks
+VP -> VP: associate captions → images (spatial)
+VP -> VP: render images (2× pixmap)
+VP -> VP: filter blanks & deduplicate
+VP --> CP: list[VisualChunk]
+deactivate VP
+
+CP -> BH: upload_image(chapter_id, image_id, png)\nfor each image
+BH --> CP: image_urls
+
+CP -> PG: store_images(chapter_id, images)
+CP -> PG: store_chunks(chapter_id, text_chunks)
+CP -> PG: link_chunk_image(chunk_id, image_id)\nfor each figure_ref match
+
+CP -> CE: embed_and_store(chunks, chapter_id, pg)
+activate CE
+CE -> CE: encode(chunk texts) → ndarray[N×768]
+CE -> PG: update_chunk_embedding(chunk_id, vector)\nfor each chunk
+deactivate CE
+
+CP --> AR: IngestResult\n{chunks: N, images: M, links: L}
+deactivate CP
+
+AR --> Admin: 200 OK — IngestResult JSON
+deactivate AR
+
+== Flow 2: Student Question (SRS Pipeline) ==
+
+actor Student
+participant "Frontend\n(React)" as FE
+participant "SRSRouter\n(FastAPI)" as SR
+participant "Retriever" as RT
+participant "ChunkEmbedder" as CE2
+participant "PostgresHandler" as PG2
+participant "ContextBuilder" as CB
+participant "Generator" as GN
+participant "Gemini API" as GM
+
+Student -> FE: Types question in Notes tab
+FE -> SR: POST /srs/ask\n{question, chapter_id}
+activate SR
+
+SR -> RT: retrieve(query, chapter_id)
+activate RT
+
+RT -> RT: normalise query\n(remove stopwords, lowercase)
+RT -> CE2: encode_query(normalised_query)
+CE2 --> RT: query_vector [768-dim]
+
+RT -> PG2: semantic_search(query_vector, chapter_id, pool=30)
+PG2 --> RT: semantic_hits [{chunk_id, score}]
+
+RT -> PG2: keyword_search(normalised_query, chapter_id, pool=30)
+PG2 --> RT: keyword_hits [{chunk_id, score}]
+
+RT -> RT: min-max normalise each score set
+RT -> RT: hybrid_score = 0.7×sem + 0.3×kw
+RT -> RT: take top-10 by hybrid_score
+
+RT -> PG2: get_neighbour_chunks(chapter_id, ±1 positions)
+PG2 --> RT: neighbour chunks
+
+RT -> RT: merge, sort by position_index
+
+RT -> PG2: get_linked_images(chunk_ids)
+PG2 --> RT: linked images
+
+RT --> SR: RetrievalResult\n{chunks, images, query_normalised}
+deactivate RT
+
+SR -> GN: answer(query, chapter_id, retriever)
+activate GN
+
+GN -> CB: build_context(query, retrieval)
+CB --> GN: {system_prompt, user_prompt}\nwith {{IMG:X.X}} placeholders
+
+GN -> GM: generate_content(\nmodel="gemini-3-flash-preview",\nsystem + user prompt)
+GM --> GN: raw Markdown answer
+
+GN -> CB: get_image_map(images)
+CB --> GN: {{"{{IMG:1.1}}": "url", ...}}
+GN -> GN: replace {{IMG:X.X}}\nwith ![Figure](url)
+
+GN --> SR: GeneratorResult\n{markdown, chunks_used, images_replaced}
+deactivate GN
+
+SR --> FE: AskOut JSON\n{markdown, images, chunks_used}
+deactivate SR
+
+FE -> FE: render Markdown\nwith react-markdown
+FE --> Student: AI-generated answer\nwith embedded figures
+
+== Flow 3: Mind Map Generation ==
+
+Student -> FE: Opens MindMap tab
+FE -> SR: GET /mindmap/{chapter_id}/flat
+
+participant "MindMapRouter" as MM
+participant "Groq API\n(LLaMA 3.1)" as GQ
+
+FE -> MM: GET /mindmap/{chapter_id}/flat
+activate MM
+
+MM -> PG2: SELECT concept_graph\nFROM core.chapters
+alt concept_graph exists (cached)
+  PG2 --> MM: cached JSON tree
+else concept_graph is NULL
+  MM -> PG2: SELECT content FROM core.chunks\nWHERE chapter_id = ? ORDER BY position_index
+  PG2 --> MM: chunk_rows
+
+  MM -> GQ: chat.completions.create(\nmodel="llama-3.1-8b-instant",\nprompt with chunk context)
+  GQ --> MM: JSON concept graph tree
+
+  MM -> PG2: UPDATE core.chapters\nSET concept_graph = tree
+end
+
+MM -> MM: flatten tree → FlatNode list\n(id, parent_id, label, tag, depth)
+MM --> FE: MindMapFlatOut\n{nodes: FlatNode[]}
+deactivate MM
+
+FE -> FE: render with React Flow\n(dagre layout, colour-coded nodes)
+FE --> Student: Interactive concept graph
+
+== Flow 4: Quiz Generation ==
+
+Student -> FE: Clicks "Generate Quiz"
+participant "QuizRouter" as QR
+
+FE -> QR: POST /quiz/generate\n{chapter_id}
+activate QR
+
+QR -> PG2: get_pyq_linked_chunks(chapter_id, limit=3)
+PG2 --> QR: pyq_chunks (60%)
+
+QR -> PG2: get_random_chunks(chapter_id, limit=2, exclude)
+PG2 --> QR: random_chunks (40%)
+
+QR -> PG2: SELECT concept_graph FROM core.chapters
+PG2 --> QR: concept_graph (optional)
+
+QR -> GM: generate_content(\nmodel="gemini-3-flash-preview",\nprompt with context + concept graph,\nresponse_mime_type="application/json")
+GM --> QR: JSON array of 5 MCQs
+
+QR -> QR: parse JSON → QuizQuestionOut[]
+QR --> FE: [QuizQuestionOut × 5]
+deactivate QR
+
+FE --> Student: Interactive quiz UI\n(options, submit, score, explanations)
+
+@enduml

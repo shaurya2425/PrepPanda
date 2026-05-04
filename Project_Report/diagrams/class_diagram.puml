@@ -1,0 +1,414 @@
+@startuml PrepPanda_Class_Diagram
+
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam shadowing false
+
+' ═══════════════════════════════════════════
+'  DATA MODELS
+' ═══════════════════════════════════════════
+
+package "Data Models" {
+
+  class TextChunk {
+    +content: string
+    +section_title: string
+    +section_path: list[string]
+    +page_number: int
+    +position_index: int
+    +token_count: int
+    +figure_refs: list[string]
+    +full_content(): string
+  }
+
+  class VisualChunk {
+    +content: string
+    +section_title: string
+    +page_number: int
+    +position_index: int
+    +token_count: int
+    +images: list[ImageBlock]
+    +captions: list[CaptionBlock]
+    +questions: list[str]
+  }
+
+  class ImageBlock {
+    +xref: int
+    +page: int
+    +rect: Rect
+    +png_bytes: bytes
+    +caption: string
+    +content_hash: string
+  }
+
+  class CaptionBlock {
+    +text: string
+    +rect: Rect
+    +page: int
+    +fig_id: string
+  }
+
+  class RetrievalResult {
+    +query_normalised: string
+    +chunks: list[dict]
+    +images: list[dict]
+  }
+
+  class GeneratorResult {
+    +query: string
+    +query_normalised: string
+    +markdown: string
+    +raw_llm: string
+    +chunks_used: int
+    +images_used: int
+    +images_replaced: int
+  }
+
+  class AnalysisReport {
+    +book_id: UUID
+    +total_pyqs: int
+    +zones: list[Zone]
+    +trends: list[TrendItem]
+    +predictions: list[Prediction]
+  }
+
+  class Zone {
+    +chapter_id: UUID
+    +chapter_title: string
+    +start_pos: int
+    +end_pos: int
+    +frequency: int
+    +section_title: string
+    +sample_questions: list[string]
+  }
+
+  class TrendItem {
+    +zone_label: string
+    +direction: string
+    +years: list[int]
+  }
+
+  class Prediction {
+    +question: string
+    +marks: int
+    +difficulty: string
+    +confidence: float
+    +reasoning: string
+    +source_pyqs: list[string]
+  }
+
+  class PatternReport {
+    +book_id: UUID
+    +year_frequency: list[dict]
+    +chapter_heatmap: list[dict]
+    +mark_distribution: list[dict]
+    +topic_hotspots: list[dict]
+    +repetition_clusters: list[dict]
+    +difficulty_curve: list[dict]
+    +exam_split: list[dict]
+    +yearly_chapter_grid: list[dict]
+    +cumulative_trend: list[dict]
+    +gap_analysis: list[dict]
+    +composite_priority: list[dict]
+  }
+
+  VisualChunk *-- "0..*" ImageBlock
+  VisualChunk *-- "0..*" CaptionBlock
+  AnalysisReport *-- "0..*" Zone
+  AnalysisReport *-- "0..*" TrendItem
+  AnalysisReport *-- "0..*" Prediction
+}
+
+' ═══════════════════════════════════════════
+'  CORE PARSERS
+' ═══════════════════════════════════════════
+
+package "Core :: Parser" {
+
+  class NodeParser {
+    -HEADING_RE: Pattern
+    -FIG_REF_RE: Pattern
+    -MIN_CHUNK_CHARS: int
+    -MAX_CHUNK_WORDS: int
+    +parse(pdf_path: string): list[TextChunk]
+    -_detect_heading(line: string): tuple
+    -_flush_buffer(buffer, section_stack): TextChunk
+    -_split_oversized(text: string): list[string]
+    -_extract_figure_refs(text: string): list[string]
+  }
+
+  class VisualParser {
+    -UPSCALE: int
+    -MIN_IMG_DIM: int
+    -MIN_IMG_AREA: int
+    +parse(pdf_path: string): list[VisualChunk]
+    -_extract_page_elements(page): tuple
+    -_classify_text_block(block): string
+    -_associate_caption_to_image(captions, images): list
+    -_render_image(page, rect): bytes
+    -_is_blank_pixmap(pix): bool
+    -_group_side_by_side(images): list
+    -_deduplicate(images): list
+  }
+
+  class ChunkEmbedder {
+    -_model: SentenceTransformer
+    -_dim: int
+    +dim: int
+    +encode(texts: list[string]): ndarray
+    +encode_query(query: string): list[float]
+    +embed_and_store(chunks, chapter_id, pg): int
+  }
+
+  class ChapterPipeline {
+    -_pg: PostgresHandler
+    -_bucket: BucketHandler
+    -_embedder: ChunkEmbedder
+    +ingest(book_id, chapter_num, title, pdf_path): dict
+    -_store_images(chapter_id, visual_chunks): int
+    -_store_chunks(chapter_id, text_chunks): int
+    -_link_chunks_to_images(chapter_id): int
+  }
+
+  NodeParser ..> TextChunk : produces
+  VisualParser ..> VisualChunk : produces
+  ChapterPipeline --> NodeParser : uses
+  ChapterPipeline --> VisualParser : uses
+  ChapterPipeline --> ChunkEmbedder : uses
+}
+
+' ═══════════════════════════════════════════
+'  STORAGE LAYER
+' ═══════════════════════════════════════════
+
+package "Core :: Storage" {
+
+  class PostgresHandler {
+    -_pool: asyncpg.Pool
+    +connect(): void
+    +close(): void
+    +create_book(title, grade, subject): UUID
+    +create_chapter(book_id, num, title): UUID
+    +store_chunks(chapter_id, chunks): int
+    +store_images(chapter_id, images): int
+    +link_chunk_image(chunk_id, image_id): void
+    +update_chunk_embedding(chunk_id, vector): void
+    +semantic_search(embedding, chapter_id, k): list
+    +keyword_search(query, chapter_id, k): list
+    +get_neighbour_chunks(chapter_id, positions): list
+    +get_linked_images(chunk_ids): list
+    +store_pyqs(book_id, pyqs): int
+    +get_pyq_linked_chunks(chapter_id, limit): list
+    +get_random_chunks(chapter_id, limit): list
+    +update_chapter_concept_graph(chapter_id, graph): void
+    +get_chapter_chunk_bounds(chapter_id): dict
+  }
+
+  class BucketHandler {
+    -_client: boto3.Client
+    -_bucket: string
+    +upload_file(key, data, content_type): string
+    +upload_pdf(chapter_id, pdf_bytes): string
+    +upload_image(chapter_id, image_id, png_bytes): string
+    +get_url(key): string
+  }
+
+  ChapterPipeline --> PostgresHandler : stores data
+  ChapterPipeline --> BucketHandler : stores files
+}
+
+' ═══════════════════════════════════════════
+'  SRS MODULE
+' ═══════════════════════════════════════════
+
+package "Core :: SRS" {
+
+  class Retriever {
+    -_pg: PostgresHandler
+    -_embedder: ChunkEmbedder
+    -SEMANTIC_WEIGHT: float
+    -KEYWORD_WEIGHT: float
+    -SEMANTIC_POOL: int
+    -KEYWORD_POOL: int
+    -TOP_K: int
+    +retrieve(query, chapter_id): RetrievalResult
+    -_normalise_query(query): string
+    -_hybrid_merge(sem_hits, kw_hits): list
+    -_expand_neighbours(chapter_id, positions): list
+  }
+
+  class ContextBuilder <<module>> {
+    +build_context(query, retrieval): dict
+    +get_image_map(images): dict
+    -_extract_fig_id(caption, img): string
+  }
+
+  class Generator {
+    -_model: string
+    -_temperature: float
+    -_max_tokens: int
+    -_client: genai.Client
+    +answer(query, chapter_id, retriever): GeneratorResult
+    -_call_llm(system, user): string
+    -_replace_images(markdown, image_map): tuple
+  }
+
+  Retriever --> PostgresHandler : queries
+  Retriever --> ChunkEmbedder : encodes query
+  Retriever ..> RetrievalResult : produces
+  Generator --> Retriever : retrieves context
+  Generator --> ContextBuilder : builds prompt
+  Generator ..> GeneratorResult : produces
+}
+
+' ═══════════════════════════════════════════
+'  ANALYSIS & FEATURES
+' ═══════════════════════════════════════════
+
+package "Core :: Analysis" {
+
+  class PYQAnalyzer {
+    -_pg: PostgresHandler
+    -_embedder: ChunkEmbedder
+    +analyse(book_id, zone_radius, top_k): AnalysisReport
+    -_build_zones(pyq_chunks, radius): list[Zone]
+    -_merge_overlapping(zones): list[Zone]
+    -_detect_trends(zones, pyqs): list[TrendItem]
+    -_predict_questions(zones, trends): list[Prediction]
+    -_compute_composite_score(zone): float
+  }
+
+  class PatternAnalyzer {
+    -_pg: PostgresHandler
+    +analyse(book_id): PatternReport
+    -_year_frequency(pyqs): list
+    -_chapter_heatmap(pyqs): list
+    -_topic_hotspots(pyqs, chunks): list
+    -_repetition_clusters(pyqs): list
+    -_difficulty_curve(pyqs): list
+  }
+
+  PYQAnalyzer --> PostgresHandler : queries
+  PYQAnalyzer ..> AnalysisReport : produces
+  PatternAnalyzer --> PostgresHandler : queries
+  PatternAnalyzer ..> PatternReport : produces
+}
+
+package "Core :: Features" {
+
+  class MindMapBuilder {
+    -_rules: list[ExtractionRule]
+    +build(chunks): dict
+    -_detect_tag(content): string
+    -_build_hierarchy(chunks): dict
+  }
+
+  MindMapBuilder --> PostgresHandler : reads chunks
+}
+
+' ═══════════════════════════════════════════
+'  API ROUTERS
+' ═══════════════════════════════════════════
+
+package "Routers (FastAPI)" {
+
+  class AdminRouter <<router>> {
+    +create_book(data): BookOut
+    +ingest_chapter(book_id, pdf, meta): IngestResult
+    +ingest_book(title, grade, subject, chapters, pdfs): IngestBookOut
+    +ingest_pyqs(book_id, body): PyqIngestResult
+    +delete_book(book_id): void
+  }
+
+  class CatalogRouter <<router>> {
+    +list_books(grade, subject): list[BookOut]
+    +get_book(book_id): BookDetailOut
+    +list_chapters(book_id): list[ChapterOut]
+    +get_chapter(chapter_id): ChapterOut
+    +list_pyqs(book_id): PaginatedPyqs
+    +stream_pdf(chapter_id): StreamingResponse
+  }
+
+  class SRSRouter <<router>> {
+    +ask(question, chapter_id): AskOut
+  }
+
+  class MindMapRouter <<router>> {
+    +get_mindmap(chapter_id): MindMapOut
+    +get_mindmap_flat(chapter_id): MindMapFlatOut
+    +get_chunk_bounds(chapter_id): ChunkBoundsOut
+    +get_mindmap_range(chapter_id, start, end): MindMapOut
+  }
+
+  class AnalysisRouter <<router>> {
+    +get_book_analysis(book_id): AnalysisReport
+    +get_chapter_analysis(chapter_id): AnalysisReport
+    +get_book_patterns(book_id): PatternReport
+  }
+
+  class QuizRouter <<router>> {
+    +generate_quiz(chapter_id): list[QuizQuestionOut]
+  }
+
+  AdminRouter --> ChapterPipeline : ingests via
+  AdminRouter --> PostgresHandler : CRUD ops
+  SRSRouter --> Generator : generates answers
+  SRSRouter --> Retriever : retrieves context
+  MindMapRouter --> MindMapBuilder : builds maps
+  AnalysisRouter --> PYQAnalyzer : analyses PYQs
+  AnalysisRouter --> PatternAnalyzer : analyses patterns
+  QuizRouter --> PostgresHandler : fetches chunks
+}
+
+' ═══════════════════════════════════════════
+'  FRONTEND
+' ═══════════════════════════════════════════
+
+package "Frontend (React)" {
+
+  class ApiClient <<module>> {
+    +health.check(): Promise
+    +catalog.listBooks(): Promise
+    +catalog.getBook(id): Promise
+    +catalog.listChapters(bookId): Promise
+    +srs.ask(chapterId, question): Promise
+    +mindmap.getTree(chapterId): Promise
+    +mindmap.getFlat(chapterId): Promise
+    +analysis.getBookAnalysis(bookId): Promise
+    +analysis.getBookPatterns(bookId): Promise
+    +quiz.generate(chapterId): Promise
+    +books.ingestBook(meta, chapters, pdfs): Promise
+    +pyqs.ingestText(bookId, text): Promise
+  }
+
+  class StudyWorkspace <<page>> {
+    +chapterId: UUID
+    +activeTab: string
+  }
+
+  class NotesTab <<component>>
+  class MindmapTab <<component>>
+  class PYQTab <<component>>
+  class PatternsTab <<component>>
+  class QuizTab <<component>>
+  class PDFTab <<component>>
+  class AnalyticsTab <<component>>
+
+  StudyWorkspace *-- NotesTab
+  StudyWorkspace *-- MindmapTab
+  StudyWorkspace *-- PYQTab
+  StudyWorkspace *-- PatternsTab
+  StudyWorkspace *-- QuizTab
+  StudyWorkspace *-- PDFTab
+  StudyWorkspace *-- AnalyticsTab
+
+  NotesTab --> ApiClient : srs.ask()
+  MindmapTab --> ApiClient : mindmap.getFlat()
+  PYQTab --> ApiClient : analysis.getBookAnalysis()
+  PatternsTab --> ApiClient : analysis.getBookPatterns()
+  QuizTab --> ApiClient : quiz.generate()
+  PDFTab --> ApiClient : catalog.getChapterPdfUrl()
+  AnalyticsTab --> ApiClient : analysis.getChapterAnalysis()
+}
+
+@enduml

@@ -1,0 +1,154 @@
+@startuml PrepPanda_UseCase_Diagram
+
+skinparam shadowing false
+skinparam usecase {
+  BackgroundColor<<core>> #E8F5E9
+  BackgroundColor<<ai>> #E3F2FD
+  BackgroundColor<<admin>> #FFF3E0
+  BackgroundColor<<browse>> #F3E5F5
+}
+
+title PrepPanda — Use Case Diagram
+
+left to right direction
+
+' ═══════════════════════════════════════════
+' ACTORS
+' ═══════════════════════════════════════════
+
+actor "Student" as Student
+actor "Admin" as Admin
+actor "Gemini API" as Gemini <<external>>
+actor "Groq API" as Groq <<external>>
+
+' ═══════════════════════════════════════════
+' SYSTEM BOUNDARY
+' ═══════════════════════════════════════════
+
+rectangle "PrepPanda System" {
+
+  ' ── Browse & Navigate ─────────────────────
+  package "Browse & Navigate" {
+    usecase "View Landing Page" as UC01 <<browse>>
+    usecase "Browse Book Library" as UC02 <<browse>>
+    usecase "Filter by Grade & Subject" as UC03 <<browse>>
+    usecase "Select Chapter" as UC04 <<browse>>
+    usecase "View Chapter PDF" as UC05 <<browse>>
+  }
+
+  ' ── AI Study Features ─────────────────────
+  package "AI-Powered Study" {
+    usecase "Ask Question\n(AI Notes)" as UC06 <<ai>>
+    usecase "View AI-Generated\nAnswer with Figures" as UC07 <<ai>>
+    usecase "Generate Mind Map" as UC08 <<ai>>
+    usecase "View Interactive\nConcept Graph" as UC09 <<ai>>
+    usecase "Generate Adaptive\nQuiz (5 MCQs)" as UC10 <<ai>>
+    usecase "Submit Quiz &\nView Score" as UC11 <<ai>>
+  }
+
+  ' ── PYQ Analytics ────────────────────────
+  package "PYQ Analytics" {
+    usecase "View PYQ\nTrend Analysis" as UC12 <<ai>>
+    usecase "View Topic Zones\n& Frequencies" as UC13 <<ai>>
+    usecase "View Predicted\nQuestions" as UC14 <<ai>>
+    usecase "View Pattern Charts\n(11 visualisations)" as UC15 <<ai>>
+    usecase "Browse PYQ List\n(Paginated)" as UC16 <<browse>>
+  }
+
+  ' ── Admin Operations ─────────────────────
+  package "Admin Operations" {
+    usecase "Login as Admin\n(Basic Auth)" as UC17 <<admin>>
+    usecase "Create Book\nRecord" as UC18 <<admin>>
+    usecase "Ingest Chapter PDF\n(Parse + Embed)" as UC19 <<admin>>
+    usecase "Ingest Full Book\n(Batch)" as UC20 <<admin>>
+    usecase "Ingest PYQs\n(Text / File)" as UC21 <<admin>>
+    usecase "Delete Book" as UC22 <<admin>>
+  }
+
+  ' ── Internal System ──────────────────────
+  package "Internal Processing" {
+    usecase "Parse Text\n(NodeParser)" as UC_NP <<core>>
+    usecase "Extract Images\n(VisualParser)" as UC_VP <<core>>
+    usecase "Embed Chunks\n(all-mpnet-base-v2)" as UC_EM <<core>>
+    usecase "Hybrid Search\n(Semantic + BM25)" as UC_HS <<core>>
+    usecase "Generate Answer\n(RAG Pipeline)" as UC_GA <<core>>
+    usecase "Generate Concept\nGraph (LLM)" as UC_CG <<core>>
+    usecase "Analyse PYQ\nZones & Trends" as UC_AZ <<core>>
+    usecase "Predict Questions\n(LLM)" as UC_PQ <<core>>
+    usecase "Generate Quiz\nQuestions (LLM)" as UC_QG <<core>>
+    usecase "Map PYQs to\nTextbook Chunks" as UC_PM <<core>>
+  }
+}
+
+' ═══════════════════════════════════════════
+' STUDENT RELATIONSHIPS
+' ═══════════════════════════════════════════
+
+Student --> UC01
+Student --> UC02
+Student --> UC03
+Student --> UC04
+Student --> UC05
+Student --> UC06
+Student --> UC08
+Student --> UC10
+Student --> UC11
+Student --> UC12
+Student --> UC15
+Student --> UC16
+
+' ═══════════════════════════════════════════
+' ADMIN RELATIONSHIPS
+' ═══════════════════════════════════════════
+
+Admin --> UC17
+Admin --> UC18
+Admin --> UC19
+Admin --> UC20
+Admin --> UC21
+Admin --> UC22
+
+' ═══════════════════════════════════════════
+' INCLUDE RELATIONSHIPS
+' ═══════════════════════════════════════════
+
+UC06 ..> UC_HS : <<include>>
+UC06 ..> UC_GA : <<include>>
+UC_GA ..> UC07 : <<include>>
+
+UC08 ..> UC_CG : <<include>>
+UC_CG ..> UC09 : <<include>>
+
+UC10 ..> UC_QG : <<include>>
+
+UC12 ..> UC_AZ : <<include>>
+UC_AZ ..> UC13 : <<include>>
+UC_AZ ..> UC_PQ : <<include>>
+UC_PQ ..> UC14 : <<include>>
+
+UC19 ..> UC_NP : <<include>>
+UC19 ..> UC_VP : <<include>>
+UC19 ..> UC_EM : <<include>>
+UC20 ..> UC19 : <<include>>
+
+UC21 ..> UC_PM : <<include>>
+
+' ═══════════════════════════════════════════
+' EXTEND RELATIONSHIPS
+' ═══════════════════════════════════════════
+
+UC02 <.. UC03 : <<extend>>
+UC08 <.. UC09 : <<extend>>
+
+' ═══════════════════════════════════════════
+' EXTERNAL ACTOR RELATIONSHIPS
+' ═══════════════════════════════════════════
+
+Gemini --> UC_GA
+Gemini --> UC_PQ
+Gemini --> UC_QG
+
+Groq --> UC_CG
+Groq --> UC_AZ
+
+@enduml
