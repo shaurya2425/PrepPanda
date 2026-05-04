@@ -1,5 +1,97 @@
 import { useState } from "react";
-import { Sparkles, Loader2, AlertCircle, CheckCircle2, BookOpen, GitCommit, Image as ImageIcon, Layout, Zap, Lightbulb, SplitSquareHorizontal } from "lucide-react";
+import { Sparkles, Loader2, AlertCircle, CheckCircle2, BookOpen, GitCommit, Image as ImageIcon, Layout, Zap, Lightbulb, SplitSquareHorizontal, Download } from "lucide-react";
+
+// ── PDF generation from blocks ─────────────────────────────────────
+function generatePDF(blocks, title) {
+  const renderBlock = (block) => {
+    switch (block.type) {
+      case 'concept': {
+        const badge = block.importance === 'high' ? '<span style="background:#fee2e2;color:#dc2626;padding:2px 10px;border-radius:12px;font-size:11px;font-weight:700;margin-left:8px">HIGH YIELD</span>' : '';
+        return `<div style="border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin-bottom:16px;background:${block.importance==='high'?'#fef2f2':'#f8fafc'}">
+          <h3 style="margin:0 0 12px;font-size:17px;color:#0f172a">${block.title}${badge}</h3>
+          <ul style="margin:0;padding-left:20px;color:#334155">${(block.content||[]).map(p => `<li style="margin-bottom:6px;line-height:1.6">${p}</li>`).join('')}</ul>
+        </div>`;
+      }
+      case 'definition':
+        return `<div style="border-left:4px solid #8b5cf6;background:#f5f3ff;border-radius:0 12px 12px 0;padding:16px 20px;margin-bottom:16px">
+          <div style="font-size:11px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Definition</div>
+          <div style="font-size:17px;font-weight:700;color:#0f172a;margin-bottom:4px">${block.term}</div>
+          <div style="color:#475569;font-style:italic;line-height:1.6">${block.definition}</div>
+        </div>`;
+      case 'process':
+        return `<div style="border:1px solid #a7f3d0;background:#ecfdf5;border-radius:12px;padding:20px;margin-bottom:16px">
+          <h3 style="margin:0 0 14px;font-size:17px;color:#065f46">⚙️ ${block.title}</h3>
+          <ol style="margin:0;padding-left:20px;color:#334155">${(block.steps||[]).map(s => `<li style="margin-bottom:10px;line-height:1.5"><strong style="color:#047857">${s.title}</strong><br/><span style="color:#475569">${s.explanation}</span></li>`).join('')}</ol>
+        </div>`;
+      case 'diagram':
+        return `<div style="border:1px solid #c7d2fe;background:#eef2ff;border-radius:12px;padding:20px;margin-bottom:16px">
+          <h3 style="margin:0 0 8px;font-size:17px;color:#3730a3">📊 ${block.title}</h3>
+          <p style="color:#475569;font-style:italic;margin:0 0 10px">${block.visual_hint||''}</p>
+          ${block.labels?.length ? `<div style="margin-bottom:8px">${block.labels.map(l => `<span style="display:inline-block;background:#ddd6fe;color:#5b21b6;padding:3px 10px;border-radius:8px;font-size:12px;margin:2px 4px">${l}</span>`).join('')}</div>` : ''}
+          <p style="color:#64748b;font-size:13px;margin:0"><strong>How to read:</strong> ${block.explanation||''}</p>
+        </div>`;
+      case 'comparison': {
+        if (!block.items?.length) return '';
+        const keys = Object.keys(block.items[0]).filter(k => k !== 'feature');
+        return `<div style="border:1px solid #e2e8f0;border-radius:12px;padding:20px;margin-bottom:16px;overflow:hidden">
+          <h3 style="margin:0 0 12px;font-size:17px;color:#0f172a">⚖️ ${block.title}</h3>
+          <table style="width:100%;border-collapse:collapse;font-size:14px">
+            <thead><tr style="background:#f1f5f9">
+              <th style="text-align:left;padding:10px;border-bottom:2px solid #cbd5e1;color:#0891b2">Feature</th>
+              ${keys.map(k => `<th style="text-align:left;padding:10px;border-bottom:2px solid #cbd5e1">${k}</th>`).join('')}
+            </tr></thead>
+            <tbody>${block.items.map(item => `<tr>
+              <td style="padding:10px;border-bottom:1px solid #e2e8f0;font-weight:600;color:#0891b2">${item.feature}</td>
+              ${keys.map(k => `<td style="padding:10px;border-bottom:1px solid #e2e8f0;color:#475569">${item[k]}</td>`).join('')}
+            </tr>`).join('')}</tbody>
+          </table>
+        </div>`;
+      }
+      case 'exam_focus':
+        return `<div style="border:2px solid #fbbf24;background:#fffbeb;border-radius:12px;padding:20px;margin-bottom:16px">
+          <div style="font-size:15px;font-weight:800;color:#d97706;margin-bottom:10px">⚡ EXAM FOCUS / PYQ</div>
+          <ul style="margin:0;padding-left:20px;color:#92400e">${(block.points||[]).map(p => `<li style="margin-bottom:6px;line-height:1.5;font-weight:500">${p}</li>`).join('')}</ul>
+        </div>`;
+      case 'memory_hook':
+        return `<div style="border:1px solid #f9a8d4;background:#fdf2f8;border-radius:12px;padding:16px 20px;margin-bottom:16px">
+          <div style="font-size:11px;font-weight:700;color:#db2777;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">💡 Memory Hook</div>
+          <div style="color:#831843;font-size:16px;font-weight:500">${block.hook}</div>
+        </div>`;
+      case 'image':
+        return `<div style="text-align:center;margin-bottom:16px">
+          <img src="${block.url}" alt="${block.caption}" style="max-width:100%;border-radius:8px;border:1px solid #e2e8f0" />
+          <div style="color:#64748b;font-size:13px;margin-top:6px">${block.caption}</div>
+        </div>`;
+      default:
+        return '';
+    }
+  };
+
+  const html = `<!DOCTYPE html>
+<html><head>
+  <meta charset="utf-8">
+  <title>${title} — PrepPanda Notes</title>
+  <style>
+    @page { margin: 20mm 15mm; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 750px; margin: 0 auto; color: #0f172a; line-height: 1.6; }
+    h1 { font-size: 26px; text-align: center; margin-bottom: 4px; }
+    .subtitle { text-align: center; color: #64748b; font-size: 14px; margin-bottom: 30px; }
+    .footer { text-align: center; color: #94a3b8; font-size: 11px; margin-top: 40px; border-top: 1px solid #e2e8f0; padding-top: 12px; }
+  </style>
+</head><body>
+  <h1>${title}</h1>
+  <div class="subtitle">Smart Notes — Generated by PrepPanda AI</div>
+  ${blocks.map(renderBlock).join('')}
+  <div class="footer">PrepPanda AI Notes • Generated ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
+</body></html>`;
+
+  const win = window.open('', '_blank');
+  if (!win) { alert('Please allow popups to download PDF.'); return; }
+  win.document.write(html);
+  win.document.close();
+  // Small delay to ensure content renders before print dialog
+  setTimeout(() => win.print(), 400);
+}
 
 const BlockConcept = ({ block }) => {
   const importanceColors = {
@@ -345,13 +437,20 @@ export function NotesTab({ title = 'this chapter', chapterId = "1" }) {
             </div>
           )}
 
-          {/* Done indicator */}
+          {/* Done indicator + Download */}
           {isDone && !isGenerating && blocks.length > 0 && (
             <div className="mb-8 p-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 flex items-center gap-3">
               <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
-              <span className="text-emerald-300 font-medium text-sm">
+              <span className="text-emerald-300 font-medium text-sm flex-1">
                 Done — {blocks.length} blocks generated across {batchCount} batches
               </span>
+              <button
+                onClick={() => generatePDF(blocks, title)}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 text-white text-sm font-semibold transition-all hover:scale-105 active:scale-95"
+              >
+                <Download className="w-4 h-4" />
+                Download PDF
+              </button>
             </div>
           )}
 
