@@ -1,13 +1,15 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { Sparkles, Loader2, Maximize, PanelRightClose, PanelRightOpen, Image as ImageIcon } from "lucide-react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { Sparkles, Loader2, Maximize, PanelRightClose, PanelRightOpen, Image as ImageIcon, ChevronsDownUp, ChevronsUpDown, RotateCcw } from "lucide-react";
 import { api } from "@/lib/api";
 import {
   ReactFlow,
+  ReactFlowProvider,
   MiniMap,
   Controls,
   Background,
   useNodesState,
   useEdgesState,
+  useReactFlow,
   addEdge,
   Handle,
   Position,
@@ -118,7 +120,7 @@ const getLayoutedElements = (nodes, edges, direction = "TB") => {
 };
 
 
-export function MindmapTab({ title = "this chapter", chapterId }) {
+function MindmapTabInner({ title = "this chapter", chapterId }) {
   const [isGenerated, setIsGenerated] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState(null);
@@ -130,6 +132,11 @@ export function MindmapTab({ title = "this chapter", chapterId }) {
 
   const [rawNodesData, setRawNodesData] = useState([]);
   const [collapsedNodes, setCollapsedNodes] = useState(new Set());
+
+  // Ref to store the latest dagre-computed positions (canonical layout)
+  const layoutPositionsRef = useRef({});
+
+  const { fitView } = useReactFlow();
 
   useEffect(() => {
     if (rawNodesData.length === 0) return;
@@ -209,9 +216,19 @@ export function MindmapTab({ title = "this chapter", chapterId }) {
 
     const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(rfNodes, rfEdges, "TB");
 
+    // Cache canonical positions
+    const posMap = {};
+    layoutedNodes.forEach(n => { posMap[n.id] = { ...n.position }; });
+    layoutPositionsRef.current = posMap;
+
     setNodes(layoutedNodes);
     setEdges(layoutedEdges);
-  }, [rawNodesData, collapsedNodes, setNodes, setEdges]);
+
+    // Re-center after layout settles
+    requestAnimationFrame(() => {
+      fitView({ padding: 0.2, duration: 300 });
+    });
+  }, [rawNodesData, collapsedNodes, setNodes, setEdges, fitView]);
 
   const handleGenerate = async () => {
     setIsGenerating(true);
@@ -236,6 +253,49 @@ export function MindmapTab({ title = "this chapter", chapterId }) {
     setSelectedNodeData(node.data);
     setIsSidePanelOpen(true);
   }, []);
+
+  // ── Drag constraint: snap back to layout position on drag end ──
+  const onNodeDragStop = useCallback((event, node) => {
+    const canonical = layoutPositionsRef.current[node.id];
+    if (canonical) {
+      setNodes(nds =>
+        nds.map(n => n.id === node.id ? { ...n, position: { ...canonical } } : n)
+      );
+      requestAnimationFrame(() => {
+        fitView({ padding: 0.2, duration: 200 });
+      });
+    }
+  }, [setNodes, fitView]);
+
+  // ── Expand All / Collapse All ──
+  const handleExpandAll = useCallback(() => {
+    setCollapsedNodes(new Set());
+  }, []);
+
+  const handleCollapseAll = useCallback(() => {
+    // Collapse every node that has children
+    const childrenMap = {};
+    rawNodesData.forEach(n => {
+      if (n.parent_id !== null && n.parent_id !== undefined) {
+        childrenMap[String(n.parent_id)] = true;
+      }
+    });
+    const allParents = new Set(Object.keys(childrenMap));
+    setCollapsedNodes(allParents);
+  }, [rawNodesData]);
+
+  // ── Reset Layout (re-apply dagre without changing collapse state) ──
+  const handleResetLayout = useCallback(() => {
+    setNodes(nds =>
+      nds.map(n => {
+        const canonical = layoutPositionsRef.current[n.id];
+        return canonical ? { ...n, position: { ...canonical } } : n;
+      })
+    );
+    requestAnimationFrame(() => {
+      fitView({ padding: 0.2, duration: 300 });
+    });
+  }, [setNodes, fitView]);
 
   if (!isGenerated) {
     return (
@@ -276,6 +336,7 @@ export function MindmapTab({ title = "this chapter", chapterId }) {
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onNodeClick={onNodeClick}
+          onNodeDragStop={onNodeDragStop}
           nodeTypes={nodeTypes}
           fitView
           fitViewOptions={{ padding: 0.2 }}
@@ -289,6 +350,38 @@ export function MindmapTab({ title = "this chapter", chapterId }) {
             className="glass !border-[var(--border)] !rounded-xl !shadow-md overflow-hidden" 
             position="top-right" 
           />
+          {/* ── Mindmap Controls Panel ── */}
+          <Panel position="top-left" className="m-4">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleExpandAll}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold glass border transition-all duration-200 hover:scale-[1.04] active:scale-[0.97]"
+                style={{ borderColor: "var(--border)", color: "var(--text-primary)", boxShadow: "var(--shadow-sm)" }}
+                title="Expand All"
+              >
+                <ChevronsUpDown className="w-3.5 h-3.5" />
+                Expand All
+              </button>
+              <button
+                onClick={handleCollapseAll}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold glass border transition-all duration-200 hover:scale-[1.04] active:scale-[0.97]"
+                style={{ borderColor: "var(--border)", color: "var(--text-primary)", boxShadow: "var(--shadow-sm)" }}
+                title="Collapse All"
+              >
+                <ChevronsDownUp className="w-3.5 h-3.5" />
+                Collapse All
+              </button>
+              <button
+                onClick={handleResetLayout}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold glass border transition-all duration-200 hover:scale-[1.04] active:scale-[0.97]"
+                style={{ borderColor: "var(--border)", color: "var(--text-primary)", boxShadow: "var(--shadow-sm)" }}
+                title="Reset Layout"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                Reset Layout
+              </button>
+            </div>
+          </Panel>
           <Panel position="bottom-left" className="m-6">
             <div className="p-4 rounded-2xl glass border" style={{ boxShadow: "var(--shadow-lg)", borderColor: "var(--border)" }}>
               <div className="text-xs font-bold mb-3 uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>Semantic Tags</div>
@@ -374,5 +467,14 @@ export function MindmapTab({ title = "this chapter", chapterId }) {
         </button>
       )}
     </div>
+  );
+}
+
+// Wrap with ReactFlowProvider so useReactFlow() works
+export function MindmapTab(props) {
+  return (
+    <ReactFlowProvider>
+      <MindmapTabInner {...props} />
+    </ReactFlowProvider>
   );
 }
