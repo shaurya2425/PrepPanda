@@ -307,6 +307,20 @@ export function NotesTab({ title = 'this chapter', chapterId = "1" }) {
         throw new Error("Backend connection failed.");
       }
 
+      // ── Check if this is a cached JSON response ──────────────────
+      const contentType = response.headers.get("content-type") || "";
+      if (contentType.includes("application/json")) {
+        const data = await response.json();
+        if (data.cached && Array.isArray(data.blocks)) {
+          setBlocks(data.blocks);
+          setBatchCount(1);
+          setIsGenerating(false);
+          setIsDone(true);
+          return;
+        }
+      }
+
+      // ── SSE streaming (cache miss) ───────────────────────────────
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";

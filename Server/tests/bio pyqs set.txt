@@ -1,0 +1,1233 @@
+---Q 1 1 Mark 2021
+Why does endosperm development precede embryo development?[cite: 1]
+---
+---Ans
+To provide assured nutrition to the developing embryo.[cite: 1]
+The endosperm is formed first to ensure that food is available for the zygote as it begins to grow.[cite: 1]
+---
+
+---Q 2 1 Mark 2021
+How many meiotic divisions are required to produce 76 seeds in a Guava fruit?[cite: 1]
+---
+---Ans
+95 meiotic divisions.[cite: 1]
+For 76 seeds, 76 megaspore divisions are needed for eggs, and 19 microspore divisions ($76/4$) are needed for pollen.[cite: 1]
+---
+
+---Q 3 1 Mark 2021
+How does pollination take place in water hyacinth and water lily?[cite: 1]
+---
+---Ans
+By insects or wind.[cite: 1]
+In these aquatic plants, the flowers emerge above water level to be pollinated like terrestrial plants.[cite: 1]
+---
+
+---Q 4 1 Mark 2021
+Name the glands that contribute to human seminal plasma.[cite: 1]
+---
+---Ans
+Paired seminal vesicles, a prostate, and paired bulbourethral glands.[cite: 1]
+These accessory glands provide the fluid medium and nutrients for sperm.[cite: 1]
+---
+
+---Q 5 1 Mark 2021
+A snapdragon plant with violet flowers was crossed with another such plant with white flowers. The F1 progeny obtained had pink flowers. Explain, in brief, the inheritance pattern seen in offsprings of F1 generation?[cite: 1]
+---
+---Ans
+Incomplete dominance.[cite: 1]
+The dominant allele does not completely mask the recessive one, resulting in an intermediate pink color in the heterozygote.[cite: 1]
+---
+
+---Q 6 1 Mark 2021
+Differentiate between aneuploidy and polyploidy.[cite: 1]
+---
+---Ans
+Aneuploidy is the gain or loss of individual chromosomes; polyploidy is the addition of an entire set of chromosomes.[cite: 1]
+---
+
+---Q 7 1 Mark 2021
+Predict the effect if, the codon UAU coding for an amino acid at the 25th position of a polypeptide of 50 amino acids, is mutated to UAA.[cite: 1]
+---
+---Ans
+A polypeptide of 24 amino acids will be formed.[cite: 1]
+UAA is a stop codon which causes premature termination of protein synthesis.[cite: 1]
+---
+
+---Q 8 1 Mark 2021
+Differentiate between pro-insulin and mature insulin.[cite: 1]
+---
+---Ans
+Pro-insulin contains an extra C-peptide chain which is absent in mature insulin.[cite: 1]
+Mature insulin consists of A and B chains linked by disulphide bridges.[cite: 1]
+---
+
+---Q 9 1 Mark 2021
+Name the commonly used vector for cloning genes into higher organisms.[cite: 1]
+---
+---Ans
+Retroviruses (for animals) or Agrobacterium tumefaciens (for plants).[cite: 1]
+These are modified to deliver specific genes into the host's genome.[cite: 1]
+---
+
+---Q 10 1 Mark 2021
+Which of the three forests- Temperate, Mangroves and Tropical Evergreen is more vulnerable to invasion by outside animals and plants?[cite: 1]
+---
+---Ans
+Temperate forests.[cite: 1]
+Compared to tropical evergreen forests, they have less complex niches, making them easier to invade.[cite: 1]
+---
+
+---Q 11 1 Mark 2021
+Assertion: Primary transcripts in eukaryotes are nonfunctional.
+Reason: Methyl guanosine triphosphate is attached to 5'- end of hnRNA.
+a. Both assertion and reason are true, and reason is the correct explanation of assertion.
+b. Both assertion and reason are true, but reason is not the correct explanation of assertion.
+c. Assertion is true but reason is false.
+d. Both assertion and reason are false.[cite: 1]
+---
+---Ans
+b. Both assertion and reason are true, but reason is not the correct explanation of assertion.[cite: 1]
+Primary transcripts are nonfunctional because they contain introns; the reason describes capping, which is only one part of the processing.[cite: 1]
+---
+
+---Q 12 1 Mark 2021
+Assertion: E. coli having pBR322 with DNA insert at BamHI site cannot grow in medium containing tetracycline.
+Reason: Recognition site for Bam HI is present in tet region of pBR322.
+a. Both assertion and reason are true, and the reason is the correct explanation of the assertion.
+b. Both assertion and reason are true, but the reason is not the correct explanation of the assertion.
+c. Assertion is true but reason is false.
+d. Both assertion and reason are false.[cite: 1]
+---
+---Ans
+a. Both assertion and reason are true, and the reason is the correct explanation of the assertion.[cite: 1]
+Inserting a gene at the BamHI site disrupts the tetracycline resistance gene, a process called insertional inactivation.[cite: 1]
+---
+
+---Q 13 1 Mark 2021
+Assertion: A community with more species is more stable than that with less species.
+Reason: More the number of species, lesser the variation in the total biomass production year after year.
+a. Both assertion and reason are true, and the reason is the correct explanation of the assertion.
+b. Both assertion and reason are true, but the reason is not the correct explanation of the assertion.
+c. Assertion is true but reason is false.
+d. Both assertion and reason are false.[cite: 1]
+---
+---Ans
+a. Both assertion and reason are true, and the reason is the correct explanation of the assertion.[cite: 1]
+High species richness leads to consistent productivity and better ecosystem resilience.[cite: 1]
+---
+
+---Q 14 1 Mark 2021
+Assertion: In Ophrys one petal of the flower bears an uncanny resemblance to the female bee.
+Reason: Two closely related species competing for the same resource can coexist simultaneously.
+a. Both assertion and reason are true, and the reason is the correct explanation of the assertion.
+b. Both assertion and reason are true, but the reason is not the correct explanation of the assertion.
+c. Assertion is true but reason is false.
+d. Both assertion and reason are false.[cite: 1]
+---
+---Ans
+b. Both assertion and reason are true, but the reason is not the correct explanation of the assertion.[cite: 1]
+The resemblance is for "sexual deceit" in pollination; the reason refers to competitive coexistence, which is a different ecological concept.[cite: 1]
+---
+
+---Q 15 2 Marks 2022
+Mention the parts of human body that get affected by Pneumonia and common cold infections. Write the causative agents of the two diseases.[cite: 2]
+---
+---Ans
+Pneumonia: Alveoli (lungs); Streptococcus pneumoniae. Common cold: Nose and respiratory passage (not lungs); Rhinovirus.[cite: 2]
+---
+
+---Q 16 2 Marks 2022
+State the impact of constant mechanical agitation and pumping of air in the aeration tank on the sewage during the biological treatment.[cite: 2]
+---
+---Ans
+It allows vigorous growth of useful aerobic microbes into flocs.[cite: 2]
+These microbes consume organic matter, significantly reducing the Biochemical Oxygen Demand (BOD) of the sewage.[cite: 2]
+---
+
+---Q 17 2 Marks 2022
+Cattle excreta is important source for producing a domestic fuel. Name the fuel and write its main components.[cite: 2]
+---
+---Ans
+Biogas or Gobar gas.[cite: 2]
+The main components are Methane ($CH_4$), Carbon dioxide ($CO_2$), and Hydrogen ($H_2$).[cite: 2]
+---
+
+---Q 18 2 Marks 2022
+Write the biological process that is responsible for the production of biogas.[cite: 2]
+---
+---Ans
+Anaerobic digestion or methanogenesis.[cite: 2]
+Methanogens breakdown the organic waste in an oxygen-free environment.[cite: 2]
+---
+
+---Q 19 2 Marks 2022
+(a) Give an example of viral biocontrol agent.
+(b) Why are they considered to be desirable when an ecologically sensitive area is being treated?[cite: 2]
+---
+---Ans
+(a) Baculoviruses (Genus Nucleopolyhedrovirus). (b) They are species-specific and have no negative impact on plants, mammals, or non-target insects.[cite: 2]
+---
+
+---Q 20 2 Marks 2022
+What is the importance of female Anopheles mosquitoes in the life of a malarial Parasite Plasmodium?[cite: 2]
+---
+---Ans
+It acts as the biological vector and the primary host where sexual reproduction of the parasite occurs.[cite: 2]
+Fertilization and sporozoite formation happen in the mosquito before being passed to humans.[cite: 2]
+---
+
+---Q 21 3 Marks 2022
+(a) How many episodes of mass extinctions of species have already taken place and which one is in progress in the current era?
+(b) How is current episode in progress different from the previous episodes and why?[cite: 2]
+---
+---Ans
+(a) Five episodes have occurred; the sixth extinction is currently in progress.[cite: 2]
+(b) The current rate is 100 to 1,000 times faster than previous ones, primarily due to human activities like habitat destruction.[cite: 2]
+---
+
+---Q 22 1 Mark 2023
+At which stage during evolution did human use hides to protect their bodies and buried their dead?
+(a) Homo habilis (b) Neanderthal man (c) Java man (d) Homo erectus[cite: 4]
+---
+---Ans
+(b) Neanderthal man.[cite: 4]
+They lived in the near East and Central Asia between 100,000 and 40,000 years ago.[cite: 4]
+---
+
+---Q 23 1 Mark 2023
+The decrease in the T-lymphocytes count in human blood will result in:
+(a) Decrease in antigens (b) Decrease in antibodies (c) Increase in antibodies (d) Increase in antigens[cite: 4]
+---
+---Ans
+(b) Decrease in antibodies.[cite: 4]
+Helper T-cells are necessary to stimulate B-cells to produce antibodies.[cite: 4]
+---
+
+---Q 24 1 Mark 2023
+A tight one-to-one relationship between many species of fig tree and certain wasps is an example of:
+(a) Commensalism (b) Parasitism (c) Amensalism (d) Mutualism[cite: 4]
+---
+---Ans
+(d) Mutualism.[cite: 4]
+The fig provides a site for egg-laying, while the wasp pollinates the fig.[cite: 4]
+---
+
+---Q 25 3 Marks 2023
+(a) Enlist any four prime goals of HGP (Human Genome Project).
+(b) Name any one common non-human animal model organism which has also been sequenced thereafter.[cite: 4]
+---
+---Ans
+(a) 1. Identify all ~20,000-25,000 human genes. 2. Sequence the 3 billion base pairs. 3. Store information in databases. 4. Improve analysis tools.[cite: 4]
+(b) Drosophila (fruit fly) or Caenorhabditis elegans (nematode).[cite: 4]
+---
+
+---Q 26 1 Mark 2024
+In which of the following plants are both male and female flowers born on the same plant and the mode of pollination can be geitonogamy or xenogamy?
+(A) Papaya (B) Date Palm (C) Maize (D) Spinach[cite: 6]
+---
+---Ans
+(C) Maize.[cite: 6]
+Maize is monoecious, allowing both geitonogamy (same plant) and xenogamy (different plant) to occur.[cite: 6]
+---
+
+---Q 27 1 Mark 2024
+Which one of the following hormones is secreted by the human placenta that helps in the maintenance of pregnancy?
+(A) Relaxin (B) Human Chorionic Gonadotropin (C) Oxytocin (D) Human Placental Lactogen[cite: 6]
+---
+---Ans
+(B) Human Chorionic Gonadotropin (hCG).[cite: 6]
+hCG maintains the corpus luteum, which in turn secretes progesterone to support the pregnancy.[cite: 6]
+---
+
+---Q 28 1 Mark 2024
+Identify the element used by Hershey and Chase to label the protein in their experiment:
+(A) $P^{32}$ (B) $S^{32}$ (C) $S^{35}$ (D) $P^{35}$[cite: 6]
+---
+---Ans
+(C) $S^{35}$.[cite: 6]
+Radioactive sulfur labels proteins because it is found in certain amino acids but not in DNA.[cite: 6]
+---
+
+---Q 29 1 Mark 2025
+PBR which is frequently used as a vector for cloning gene in E. coli is a/an:
+(A) Original bacterial plasmid (B) Modified bacterial plasmid (C) Viral genome (D) Transposon[cite: 9]
+---
+---Ans
+(B) Modified bacterial plasmid.[cite: 9]
+pBR322 was specifically engineered to serve as a high-utility cloning vector.[cite: 9]
+---
+
+---Q 30 1 Mark 2025
+Name the microbe that is used as biocontrol agent for controlling pest butterfly caterpillars:
+(A) Streptococcus spp. (B) Trichoderma spp. (C) Bacillus thuringiensis (D) Saccharomyces cerevisiae[cite: 9]
+---
+---Ans
+(C) Bacillus thuringiensis.[cite: 9]
+Its spores produce a toxin that specifically kills certain insect larvae.[cite: 9]
+---
+
+---Q 31 1 Mark 2025
+What are minisatellites?
+(A) 10-40 bp sized small sequences within the genes.
+(B) Short coding repetitive sequences region on the eukaryotic genome.
+(C) Short non-coding repetitive sequences forming a large portion of eukaryotic genome.
+(D) Regions of coding strand of DNA.[cite: 9]
+---
+---Ans
+(C) Short non-coding repetitive sequences forming a large portion of eukaryotic genome.[cite: 9]
+They are highly variable between individuals and are used in DNA fingerprinting.[cite: 9]
+---
+
+---Q 32 3 Marks 2025
+Describe the three types of pollination that can occur in a chasmogamous bisexual flower.[cite: 8]
+---
+---Ans
+1. Autogamy: Pollen from the same flower lands on its own stigma.[cite: 8]
+2. Geitonogamy: Pollen from a different flower on the same plant lands on the stigma.[cite: 8]
+3. Xenogamy: Pollen from a flower on a different plant lands on the stigma.[cite: 8]
+---
+
+---Q 33 2 Marks 2025
+Explain how is a bacterial cell made 'competent' to take up recombinant DNA from the medium.[cite: 8]
+---
+---Ans
+The cell is treated with a specific concentration of a divalent cation like Calcium.[cite: 8]
+This increases the pore size in the cell wall; the cell is then heat-shocked by moving it from ice to $42^\circ C$ and back to ice.[cite: 8]
+---
+---Q 34 1 Mark 2021
+Name the commonly used vector for cloning genes into higher organisms[cite: 1].
+---
+---Ans
+Retroviruses[cite: 1].
+In animals, retroviruses are disarmed and used to deliver desirable genes into animal cells[cite: 1].
+---
+
+---Q 35 1 Mark 2021
+Differentiate between aneuploidy and polyploidy[cite: 1].
+---
+---Ans
+Aneuploidy involves the gain or loss of a chromosome due to failure of segregation of chromatids[cite: 1]. Polyploidy is an increase in a whole set of chromosomes due to failure of cytokinesis after the telophase stage of cell division[cite: 1].
+---
+
+---Q 36 1 Mark 2021
+Assertion: Primary transcripts in eukaryotes are nonfunctional[cite: 1].
+Reason: Methyl guanosine triphosphate is attached to 5'- end of hnRNA[cite: 1].
+a. Both assertion and reason are true, and reason is the correct explanation of assertion.
+b. Both assertion and reason are true, but reason is not the correct explanation of assertion.
+c. Assertion is true but reason is false.
+d. Both assertion and reason are false[cite: 1].
+---
+---Ans
+b. Both assertion and reason are true, but reason is not the correct explanation of assertion[cite: 1].
+Primary transcripts are nonfunctional because they contain both exons and introns; the attachment of methyl guanosine triphosphate (capping) is a processing step but doesn't explain the non-functionality[cite: 1].
+---
+
+---Q 37 1 Mark 2021
+Assertion: E. coli having pBR322 with DNA insert at BamHI site cannot grow in medium containing tetracycline[cite: 1].
+Reason: Recognition site for Bam HI is present in tet region of pBR322[cite: 1].
+a. Both assertion and reason are true, and the reason is the correct explanation of the assertion.
+b. Both assertion and reason are true, but the reason is not the correct explanation of the assertion.
+c. Assertion is true but reason is false.
+d. Both assertion and reason are false[cite: 1].
+---
+---Ans
+a. Both assertion and reason are true, and the reason is the correct explanation of the assertion[cite: 1].
+The BamHI recognition site is located within the tetracycline resistance gene; inserting foreign DNA there causes insertional inactivation of that gene[cite: 1].
+---
+
+---Q 38 1 Mark 2021
+Assertion: An organism with lethal mutation may not even develop beyond the zygote stage[cite: 1].
+Reason: All types of gene mutations are lethal[cite: 1].
+a. Both assertion and reason are true, and the reason is the correct explanation of the assertion.
+b. Both assertion and reason are true, but the reason is not the correct explanation of the assertion.
+c. Assertion is true but reason is false.
+d. Both assertion and reason are false[cite: 1].
+---
+---Ans
+c. Assertion is true but reason is false[cite: 1].
+While some mutations are lethal and halt development, many mutations are neutral, beneficial, or lead to non-lethal phenotypic changes[cite: 1].
+---
+
+---Q 39 4 Marks 2021
+The approach to biological control includes:
+a. Import and release of an insect pest to a new area to provide hosts for natural enemies
+b. Import and release of natural enemies from the native home of an alien insect pest that has invaded a new area
+c. Preservation of natural enemies (predators & parasitoids) that are already established in an area
+d. Use of insecticides to reduce alien insect pests to establish new equilibrium position[cite: 1].
+---
+---Ans
+c. Preservation of natural enemies (predators & parasitoids) that are already established in an area[cite: 1].
+Organic farmers believe that biodiversity furthers health; they prefer to keep pests at manageable levels through natural predation rather than eradication[cite: 1].
+---
+
+---Q 40 4 Marks 2021
+Sickle cell anemia is caused by mutations in a gene called HBB. It is an inherited blood disorder that occurs if both the maternal and paternal copies of the HBB gene are defective. If both parents have sickle cell trait, then there is _________ of the child having sickle cell anemia[cite: 1].
+a. 25% risk
+b. 50% risk
+c. 75% risk
+d. No risk[cite: 1].
+---
+---Ans
+a. 25% risk[cite: 1].
+When both parents are carriers (traits), the probability of an offspring being homozygous recessive (affected) is 1 in 4[cite: 1].
+---
+
+---Q 41 2 Marks 2021
+State the composition and principle of oral pills as a contraceptive measure taking the example of Saheli[cite: 1].
+---
+---Ans
+Saheli is a non-steroidal preparation containing 'centchroman'[cite: 1]. It works by inhibiting ovulation and implantation and is a 'once-a-week' pill with very few side effects[cite: 1].
+---
+
+---Q 42 2 Marks 2021
+Karyotype of a child shows trisomy of chromosome number 21. Identify the disorder and state the symptoms which are likely to be exhibited in this case[cite: 1].
+---
+---Ans
+Down's Syndrome[cite: 1]. Symptoms include short stature, small round head, furrowed tongue, partially open mouth, and broad palm with characteristic palm crease[cite: 1].
+---
+
+---Q 43 2 Marks 2021
+What are sticky ends? State their significance in recombinant DNA technology[cite: 1].
+---
+---Ans
+Sticky ends are single-stranded overhanging portions of DNA produced when restriction enzymes cut slightly away from the center of the palindrome sites[cite: 1]. They facilitate the action of the enzyme DNA ligase by forming hydrogen bonds with complementary cut counterparts[cite: 1].
+---
+
+---Q 44 2 Marks 2021
+Explain how advanced ex-situ conservation techniques assist in preserving threatened species of plants and animals[cite: 1].
+---
+---Ans
+Techniques like cryopreservation allow gametes of threatened species to be preserved in viable conditions for long periods[cite: 1]. Eggs can be fertilized in vitro, and plants can be propagated using tissue culture methods[cite: 1].
+---
+
+---Q 45 3 Marks 2021
+Define flocs and state their importance in biological treatment of waste water[cite: 1].
+---
+---Ans
+Flocs are masses of bacteria associated with fungal filaments to form mesh-like structures[cite: 1]. During secondary treatment, these microbes consume the major part of the organic matter in the effluent, significantly reducing the BOD (Biochemical Oxygen Demand)[cite: 1].
+---
+---Q 46 2 Marks 2022
+Mention the parts of human body that get affected by Pneumonia and common cold infections. Write the causative agents of the two diseases[cite: 2].
+---
+---Ans
+Pneumonia affects the alveoli (air-filled sacs) of the lungs, where they get filled with fluid[cite: 2]. The causative agents are Streptococcus pneumoniae and Haemophilus influenzae[cite: 2]. Common cold affects the nose and respiratory passage but not the lungs, and it is caused by Rhinoviruses[cite: 2].
+---
+
+---Q 47 2 Marks 2022
+State the impact of constant mechanical agitation and pumping of air in the aeration tank on the sewage during the biological treatment[cite: 2].
+---
+---Ans
+Constant agitation and air pumping allow vigorous growth of useful aerobic microbes into flocs[cite: 2]. These microbes consume the major part of the organic matter in the effluent, which significantly reduces the Biochemical Oxygen Demand (BOD) of the sewage[cite: 2].
+---
+
+---Q 48 2 Marks 2022
+Cattle excreta is important source for producing a domestic fuel. Name the fuel and write its main components[cite: 2].
+---
+---Ans
+The fuel is Biogas (or Gobar gas)[cite: 2]. Its main components are methane, carbon dioxide, and hydrogen[cite: 2].
+---
+
+---Q 49 2 Marks 2022
+Write the biological process that is responsible for the production of biogas[cite: 2].
+---
+---Ans
+The process is anaerobic digestion or fermentation carried out by methanogenic bacteria (methanogens)[cite: 2]. These bacteria breakdown cellulosic material in the absence of oxygen to produce methane-rich gas[cite: 2].
+---
+
+---Q 50 2 Marks 2022
+Give an example of viral biocontrol agent. Why are they considered to be desirable when an ecologically sensitive area is being treated[cite: 2]?
+---
+---Ans
+An example is Baculoviruses, specifically those in the genus Nucleopolyhedrovirus[cite: 2]. They are desirable because they are species-specific, narrow-spectrum insecticidal agents that have no negative impacts on plants, mammals, birds, fish, or non-target insects[cite: 2].
+---
+
+---Q 51 2 Marks 2022
+What is the importance of female Anopheles mosquitoes in the life of a malarial Parasite Plasmodium[cite: 2]?
+---
+---Ans
+The female Anopheles mosquito acts as the biological vector and the primary host[cite: 2]. Fertilization and development of the parasite take place within the mosquito's gut, and it later transmits the infectious stage (sporozoites) to a human host during a blood meal[cite: 2].
+---
+
+---Q 52 3 Marks 2022
+Panama has nearly 560 species of mammals, Canada has nearly 301 species and Denmark has 67 species. Identify the location of these countries in the respective climatic regions (Polar, Temperate, Tropic)[cite: 2].
+---
+---Ans
+Panama: Tropic region (highest species richness)[cite: 2]. Canada: Temperate region (intermediate species richness)[cite: 2]. Denmark: Polar region (lowest species richness)[cite: 2].
+---
+
+---Q 53 3 Marks 2022
+Plants and animals do not have a uniform diversity in the world. Write the term given to this pattern of diversity and why[cite: 2]?
+---
+---Ans
+The term is Latitudinal Gradients[cite: 2]. This happens because species diversity generally decreases as we move away from the equator towards the poles; tropical regions have stayed undisturbed for millions of years, are less seasonal/more predictable, and receive more solar energy[cite: 2].
+---
+
+---Q 54 3 Marks 2022
+How many episodes of mass extinctions of species have already taken place and which one is in progress in the current era[cite: 2]?
+---
+---Ans
+Five episodes of mass extinction have already occurred since the origin of life[cite: 2]. The sixth extinction is currently in progress[cite: 2].
+---
+
+---Q 55 3 Marks 2022
+How is the current extinction episode different from the previous episodes and why[cite: 2]?
+---
+---Ans
+The difference is in the rate; the current extinction rate is estimated to be 100 to 1,000 times faster than in pre-human times[cite: 2]. This accelerated rate is primarily due to human activities such as habitat loss, over-exploitation, and alien species invasion[cite: 2].
+---
+
+---Q 56 3 Marks 2022
+Enumerate the main sources of bio-fertilisers giving one example of each[cite: 2].
+---
+---Ans
+1. Bacteria: Rhizobium (symbiotic) or Azotobacter (free-living)[cite: 2].
+2. Fungi: Mycorrhizal associations, such as those formed by the genus Glomus[cite: 2].
+3. Cyanobacteria: Anabaena, Nostoc, or Oscillatoria[cite: 2].
+---
+---Q 57 2 Marks 2022
+Many members of genus Glomus form a mycorrhizial association with plants. Elaborate how is this association beneficial to the plants[cite: 3].
+---
+---Ans
+The fungal symbiont absorbs phosphorus from the soil and passes it to the plant[cite: 3]. Additionally, such associations provide resistance to root-borne pathogens, tolerance to salinity and drought, and an overall increase in plant growth and development[cite: 3].
+---
+
+---Q 58 2 Marks 2022
+State the mode of action of cocaine on human body. Write the scientific name of the source plant it is obtained from[cite: 3].
+---
+---Ans
+Cocaine interferes with the transport of the neuro-transmitter dopamine[cite: 3]. It is obtained from the plant Erythroxylum coca[cite: 3].
+---
+
+---Q 59 2 Marks 2022
+Enumerate four most common warning signs of drug and alcohol abuse amongst the youth[cite: 3].
+---
+---Ans
+1. Drop in academic performance and unexplained absence from school/college[cite: 3].
+2. Lack of interest in personal hygiene[cite: 3].
+3. Withdrawal, isolation, depression, fatigue, and aggressive behavior[cite: 3].
+4. Loss of interest in hobbies and change in sleeping/eating habits[cite: 3].
+---
+
+---Q 60 2 Marks 2022
+Which one of the two 'S.T.P.' (A - Sequential Filtration before Biological or B - Biological before Filtration) will be more effective in treating the human excreta in the municipal waste[cite: 3]?
+---
+---Ans
+S.T.P. (B) is more effective[cite: 3].
+---
+
+---Q 61 2 Marks 2022
+Write the steps followed in carrying the treatment of the sewage in step (Z - Biological Treatment), once the BOD of sewage is reduced significantly till it is passed on to the "anaerobic sludge digesters"[cite: 3].
+---
+---Ans
+Once BOD is significantly reduced, the effluent is passed into a settling tank where the bacterial 'flocs' are allowed to sediment[cite: 3]. This sediment is called activated sludge[cite: 3]. A small part of it is pumped back into the aeration tank as inoculum, and the remaining major part is pumped into large tanks called anaerobic sludge digesters[cite: 3].
+---
+
+---Q 62 2 Marks 2022
+Ringworm is one of the most common infectious fungal disease in humans. Name any two genera of fungi which cause ringworm and state any of its two symptoms[cite: 3].
+---
+---Ans
+Genera: Microsporum, Trichophyton, or Epidermophyton[cite: 3]. Symptoms: Appearance of dry, scaly lesions on various parts of the body such as skin, nails, and scalp; these lesions are accompanied by intense itching[cite: 3].
+---
+
+---Q 63 2 Marks 2022
+Write the observations made at the end of Connell's field experiment on barnacles on the rocky sea coasts of Scotland[cite: 3].
+---
+---Ans
+The superior barnacle Balanus dominates the intertidal area and excludes the smaller barnacle Chathamalus from that zone[cite: 3]. This demonstrated competitive release and exclusion in a natural habitat[cite: 3].
+---
+
+---Q 64 2 Marks 2022
+Name any two categories of organisms that in general are adversely affected by competition[cite: 3].
+---
+---Ans
+Herbivores and plants appear to be more adversely affected by competition than carnivores[cite: 3].
+---
+
+---Q 65 2 Marks 2022
+Which of the two regions (X - Temperate or Y - Tropical) will show high biological diversity and why[cite: 3]?
+---
+---Ans
+Region (Y - Tropical) will show higher diversity[cite: 3]. This is because tropical latitudes receive more solar energy, which contributes to higher productivity and species richness[cite: 3].
+---
+
+---Q 66 2 Marks 2022
+What would be the best method to measure the total population density of the number of fishes in river and why[cite: 3]?
+---
+---Ans
+The best method is to measure the number of fish caught per trap[cite: 3]. This is because it provides a good enough measure of total population density without the need to count every individual fish in the vast river[cite: 3].
+---
+
+---Q 67 3 Marks 2022
+Mention the role of mast cells in an allergic response[cite: 3].
+---
+---Ans
+Allergy is due to the release of chemicals like histamine and serotonin from the mast cells[cite: 3]. These chemicals trigger the inflammatory and immune responses typical of an allergy[cite: 3].
+---
+
+---Q 68 3 Marks 2022
+Enlist two criteria that are used to identify a region for maximum protection as 'Biodiversity hotspots'[cite: 3].
+---
+---Ans
+1. Very high levels of species richness[cite: 3].
+2. High degree of endemism (species confined to that region and not found anywhere else)[cite: 3].
+---
+
+---Q 69 3 Marks 2022
+Name any two "hotspot" regions in our country[cite: 3].
+---
+---Ans
+Western Ghats and Sri Lanka; Indo-Burma; or Himalaya[cite: 3].
+---
+
+---Q 70 3 Marks 2022
+'An HIV patient normally doesn't die of 'AIDS', but death is caused due to many other infections.' Do you agree with the statement? Give explanatory reasons in support of your answer[cite: 3].
+---
+---Ans
+Yes, the statement is correct[cite: 3]. HIV attacks helper T-lymphocytes (TH cells), leading to a progressive decrease in their number[cite: 3]. During this period, the person suffers from infections that could have otherwise been overcome, such as those due to Mycobacterium, viruses, fungi, and even parasites like Toxoplasma[cite: 3].
+---
+
+---Q 71 3 Marks 2022
+Name the method of cell-free DNA amplification developed in the mid-1980s and explain the basic steps involved[cite: 3].
+---
+---Ans
+The method is PCR (Polymerase Chain Reaction)[cite: 3]. Steps:
+1. Denaturation: Double-stranded DNA is heated to separate the strands[cite: 3].
+2. Annealing: Two sets of primers are joined to the separated strands[cite: 3].
+3. Extension: The enzyme DNA polymerase (Taq polymerase) extends the primers using nucleotides provided in the reaction[cite: 3].
+---
+
+---Q 72 3 Marks 2022
+Non viral and non vector methods are sometimes used to transfer genes or alien DNA into a plant cell. Explain one such method used in genetic engineering[cite: 3].
+---
+---Ans
+Biolistics or Gene Gun: In this method, cells are bombarded with high-velocity micro-particles of gold or tungsten coated with DNA[cite: 3].
+---
+
+---Q 73 3 Marks 2022
+How does a gene therapy involving direct modification of the cells, in order to achieve a therapeutic goal is used in the treatment of ADA deficiency? Explain[cite: 3].
+---
+---Ans
+Lymphocytes from the blood of the patient are grown in a culture outside the body[cite: 3]. A functional ADA cDNA (using a retroviral vector) is then introduced into these lymphocytes, which are subsequently returned to the patient[cite: 3]. Since these cells are not immortal, the patient requires periodic infusion of such genetically engineered lymphocytes[cite: 3].
+---
+
+---Q 74 3 Marks 2022
+A host cell must be made competent, before it is able to receive an rDNA. Justify[cite: 3].
+---
+---Ans
+Since DNA is a hydrophilic molecule, it cannot pass through cell membranes[cite: 3]. In order to force bacteria to take up the plasmid, the bacterial cells must first be made ‘competent’ to take up DNA by treating them with a specific concentration of a divalent cation, such as calcium[cite: 3].
+---
+
+---Q 75 5 Marks 2022
+Identify 'Rop' and 'Ori' in the diagram of pBR322 from 'U', 'V', 'W', 'X', 'Y' and 'Z'. Write their functions[cite: 3].
+---
+---Ans
+Ori (U): This is a sequence from where replication starts; it is also responsible for controlling the copy number of the linked DNA[cite: 3].
+Rop (Y): It codes for the proteins involved in the replication of the plasmid[cite: 3].
+---
+
+---Q 76 5 Marks 2022
+Write any two natural sources from where dsRNA molecule could be obtained for silencing the specific mRNA in RNAi[cite: 3].
+---
+---Ans
+The source of this complementary RNA could be from an infection by viruses that have RNA genomes or mobile genetic elements (transposons) that replicate via an RNA intermediate[cite: 3].
+---
+
+---Q 77 5 Marks 2022
+How is RNAi used in controlling the infection on the roots of tobacco plants by the nematode Meloidogyne incognitia[cite: 3]?
+---
+---Ans
+Nematode-specific genes are introduced into the host plant using Agrobacterium vectors[cite: 3]. The DNA is introduced such that it produces both sense and anti-sense RNA in the host cells[cite: 3]. These two RNAs, being complementary to each other, form a double-stranded RNA (dsRNA) that initiates RNAi and thus silences the specific mRNA of the nematode[cite: 3]. As a consequence, the parasite cannot survive in a transgenic host expressing specific interfering RNA[cite: 3].
+---
+
+---Q 78 1 Mark 2023
+At which stage during evolution did human use hides to protect their bodies and buried their dead?
+(a) Homo habilis (b) Neanderthal man (c) Java man (d) Homo erectus[cite: 4]
+---
+---Ans
+(b) Neanderthal man[cite: 4]
+Neanderthals with a brain size of 1400cc lived in near east and central Asia between 100,000-40,000 years ago and used hides and buried their dead[cite: 4].
+---
+
+---Q 79 1 Mark 2023
+The decrease in the T-lymphocytes count in human blood will result in:
+(a) Decrease in antigens (b) Decrease in antibodies (c) Increase in antibodies (d) Increase in antigens[cite: 4]
+---
+---Ans
+(b) Decrease in antibodies[cite: 4]
+T-lymphocytes, specifically helper T-cells, are responsible for stimulating B-cells to produce antibodies; a drop in their count impairs antibody production[cite: 4].
+---
+
+---Q 80 1 Mark 2023
+A tight one-to-one relationship between many species of fig tree and certain wasps is an example of:
+(a) Commensalism (b) Parasitism (c) Amensalism (d) Mutualism[cite: 4]
+---
+---Ans
+(d) Mutualism[cite: 4]
+The wasp pollinates the fig inflorescence while the fig provides the wasp with a site for egg-laying and developing seeds for larvae nutrition[cite: 4].
+---
+
+---Q 81 1 Mark 2023
+The primary productivity in an ecosystem is expressed as:
+(a) $gm^{-2}yr^{-1}$ (b) $gm^{-2}yr$ (c) $K cal m^{-2}yr^{-1}$ (d) $K cal m^{-2}$[cite: 4]
+---
+---Ans
+(c) $K cal m^{-2}yr^{-1}$[cite: 4]
+Primary productivity is the rate of biomass production, expressed in terms of energy per unit area over a time period[cite: 4].
+---
+
+---Q 82 1 Mark 2023
+The IUCN Red Data List (2004) in the last 500 years documents the extinction of nearly 784 species including:
+(a) 330 invertebrates (b) 338 invertebrates (c) 359 invertebrates (d) 362 invertebrates[cite: 4]
+---
+---Ans
+(c) 359 invertebrates[cite: 4]
+The total of 784 extinctions includes 338 vertebrates, 359 invertebrates, and 87 plants[cite: 4].
+---
+
+---Q 83 2 Marks 2023
+"Cattle and goats do not browse the Calotropis plant." Justify the statement giving reasons[cite: 4].
+---
+---Ans
+Calotropis produces highly poisonous cardiac glycosides[cite: 4]. These chemicals act as a defense mechanism to inhibit herbivores from eating the plant by causing illness or death[cite: 4].
+---
+
+---Q 84 2 Marks 2023
+Why is a malignant tumour considered to be more damaging than a benign tumour? Explain[cite: 4].
+---
+---Ans
+Malignant tumours grow rapidly, invade and damage surrounding normal tissues, and exhibit metastasis[cite: 4]. Cells sloughed from these tumours reach distant sites via blood to start new tumours elsewhere[cite: 4].
+---
+
+---Q 85 2 Marks 2023
+Write the scientific name of the source organism of the thermostable DNA polymerase used in PCR. State the advantage of using it[cite: 4].
+---
+---Ans
+Scientific name: Thermus aquaticus[cite: 4].
+Advantage: It remains active during the high-temperature denaturation step of PCR, allowing automated amplification without needing to add new enzyme in each cycle[cite: 4].
+---
+
+---Q 86 3 Marks 2023
+Human Genome Project (HGP) was a mega project launched in the year 1990 with some important goals. Enlist any four prime goals of HGP[cite: 4].
+---
+---Ans
+1. Identify all the approximately 20,000-25,000 genes in human DNA[cite: 4].
+2. Determine the sequences of the 3 billion chemical base pairs that make up human DNA[cite: 4].
+3. Store this information in databases[cite: 4].
+4. Improve tools for data analysis[cite: 4].
+---
+
+---Q 87 3 Marks 2023
+Industrial melanism in England after 1850 is an excellent example of Natural selection. Explain how[cite: 4]?
+---
+---Ans
+Before industrialization, white-winged moths were better camouflaged against lichen-covered trees[cite: 4]. After industrialization, tree trunks became dark with soot, favoring dark-winged moths which survived bird predation better than the conspicuous white ones[cite: 4].
+---
+
+---Q 88 3 Marks 2023
+One of the major approaches of crop improvement programme is Artificial Hybridisation. Explain the steps involved in making sure that only the desired pollen grain pollinate the stigma of a bisexual flower by a plant breeder[cite: 4].
+---
+---Ans
+The steps include Emasculation (removal of anthers from the flower bud before they dehisce) and Bagging (covering the emasculated flower with a bag to prevent unwanted pollen contamination)[cite: 4]. Desired pollen is then dusted on the stigma when it becomes receptive[cite: 4].
+---
+
+---Q 89 4 Marks 2023
+In which period, according to the graph, there are maximum chances of a person transmitting a disease / infection and why? (Referring to the Pathogenesis graph)[cite: 4].
+---
+---Ans
+The period of illness[cite: 4]. This is because the number of microorganisms in the host's body is at its peak during this stage[cite: 4].
+---
+
+---Q 90 4 Marks 2023
+State what is aneuploidy[cite: 4].
+---
+---Ans
+Aneuploidy is the gain or loss of a chromosome(s) due to the failure of segregation of chromatids during cell division[cite: 4].
+---
+
+---Q 91 5 Marks 2023
+Explain the monosporic development of embryo sac in the ovule of an angiosperm[cite: 4].
+---
+---Ans
+One megaspore remains functional while the other three degenerate[cite: 4]. The functional megaspore undergoes three sequential mitotic nuclear divisions to form an 8-nucleate, 7-celled embryo sac[cite: 4]. This development from a single megaspore is called monosporic[cite: 4].
+---
+
+---Q 92 5 Marks 2023
+Explain the formation of placenta after the implantation in a human female[cite: 4].
+---
+---Ans
+After implantation, finger-like projections called chorionic villi appear on the trophoblast, which are surrounded by uterine tissue and maternal blood[cite: 4]. The chorionic villi and uterine tissue become interdigitated with each other to form the placenta, the structural and functional unit between the developing embryo and maternal body[cite: 4].
+---
+
+---Q 93 5 Marks 2023
+Name and describe the steps involved in DNA Fingerprinting[cite: 4].
+---
+---Ans
+1. Isolation of DNA. 2. Digestion of DNA by restriction endonucleases. 3. Separation of DNA fragments by electrophoresis. 4. Blotting (transferring) of separated fragments to synthetic membranes. 5. Hybridisation using labelled VNTR probe. 6. Detection of hybridised DNA fragments by autoradiography[cite: 4].
+---
+---Q 94 1 Mark 2024
+In which of the following plants are both male and female flowers born on the same plant and the mode of pollination can be geitonogamy or xenogamy?
+(A) Papaya (B) Date Palm (C) Maize (D) Spinach[cite: 7]
+---
+---Ans
+(C) Maize[cite: 7]
+Maize is a monoecious plant where male and female flowers are present on the same individual, allowing for geitonogamy, while xenogamy is also possible through wind[cite: 7].
+---
+
+---Q 95 1 Mark 2024
+Which one of the following hormones is secreted by the human placenta that helps in the maintenance of pregnancy?
+(A) Relaxin (B) Human Chorionic Gonadotropin (C) Oxytocin (D) Human Placental Lactogen[cite: 7]
+---
+---Ans
+(B) Human Chorionic Gonadotropin[cite: 7]
+Human Chorionic Gonadotropin (hCG) is essential for maintaining the corpus luteum, which secretes the progesterone needed to maintain the uterine lining during pregnancy[cite: 7].
+---
+
+---Q 96 1 Mark 2024
+The periodic abstinence by a couple for family planning should be from:
+(A) Day 5 to 10 of menstrual cycle
+(B) Day 13 to 15 of menstrual cycle
+(C) Day 10 to 17 of menstrual cycle
+(D) Day 16 to 20 of menstrual cycle[cite: 7]
+---
+---Ans
+(C) Day 10 to 17 of menstrual cycle[cite: 7]
+This period is considered the fertile window because ovulation is expected to occur around day 14, and the chances of fertilization are very high during these days[cite: 7].
+---
+
+---Q 97 1 Mark 2024
+You know that there are twenty different types of naturally occurring amino acids and four different types of bases in the DNA. A combination of 3 such bases code for a specific amino acid. If instead there are 96 different amino acids and 12 different bases in the DNA, then the minimum number of combination of bases required to form a codon is :
+(A) 6 (B) 8 (C) 2 (D) 4[cite: 7]
+---
+---Ans
+(C) 2[cite: 7]
+With 12 different bases, a codon of 2 bases ($12^2$) provides 144 combinations, which is the minimum required to cover 96 different amino acids[cite: 7].
+---
+
+---Q 98 1 Mark 2024
+The type of bond represented by the dotted line '----' in a schematic polynucleotide chain is:
+(A) Hydrogen bond (B) Peptide bond (C) N-glycosidic linkage (D) Phosphodiester bond[cite: 7]
+---
+---Ans
+(A) Hydrogen bond[cite: 7]
+In a DNA double helix, the two strands are held together by hydrogen bonds between the nitrogenous base pairs[cite: 7].
+---
+
+---Q 99 2 Marks 2024
+Identify A, B, C and D in the table given below:
+Pericarp — 'A'
+B' — Cotyledon in seed of grass family
+Embryonal axis — 'C'
+D' — Remains of nucellus in a seed[cite: 7]
+---
+---Ans
+A: Fruit wall; B: Scutellum; C: Tigellum; D: Perisperm[cite: 7]
+---
+
+---Q 100 2 Marks 2024
+Observe the picture of giraffes reaching for tall trees. Name the naturalist and write the explanation given by him that evolution of life forms had occurred on the basis of this example.[cite: 7]
+---
+---Ans
+Naturalist: Charles Darwin[cite: 7].
+Explanation: Natural selection; giraffes with longer necks had a survival advantage in reaching food, allowing them to reproduce and pass that trait to the next generation[cite: 7].
+---
+
+---Q 101 3 Marks 2024
+In a family, the father, the daughter and the son are colour blind, whereas the mother has normal vision. Do you think the son and the daughter have inherited the disease from their father? Work out a cross to justify your answer.[cite: 7]
+---
+---Ans
+The son inherited the allele from the mother (who must be a carrier), and the daughter inherited alleles from both parents[cite: 7].
+Color blindness is an X-linked recessive disorder; the father gives his X chromosome to his daughter but his Y chromosome to his son[cite: 7].
+---
+
+---Q 102 1 Mark 2025
+PBR which is frequently used as a vector for cloning gene in E. coli is a/an:
+(A) Original bacterial plasmid (B) Modified bacterial plasmid (C) Viral genome (D) Transposon[cite: 9]
+---
+---Ans
+(B) Modified bacterial plasmid[cite: 9]
+pBR322 is a standard cloning vector that was engineered to contain specific restriction sites and selectable markers like antibiotic resistance genes[cite: 9].
+---
+
+---Q 103 1 Mark 2025
+Name the microbe that is used as biocontrol agent for controlling pest butterfly caterpillars:
+(A) Streptococcus spp. (B) Trichoderma spp. (C) Bacillus thuringiensis (D) Saccharomyces cerevisiae[cite: 9]
+---
+---Ans
+(C) Bacillus thuringiensis[cite: 9]
+This bacterium produces toxic cry proteins that, when ingested by the larvae, lead to the destruction of their gut and subsequent death[cite: 9].
+---
+
+---Q 104 1 Mark 2025
+India has only 2.4% of the world's land area but its share of the global species diversity is:
+(A) 8.1% (B) 12.9% (C) 7.3% (D) 5.1%[cite: 9]
+---
+---Ans
+(A) 8.1%[cite: 9]
+This high percentage makes India one of the 12 mega diversity countries of the world[cite: 9].
+---
+
+---Q 105 2 Marks 2025
+Explain how is a bacterial cell made 'competent' to take up recombinant DNA from the medium.
+---
+---Ans
+The bacterial cells are treated with a specific concentration of a divalent cation, such as calcium, followed by a heat shock ($42^\circ C$).
+This process increases the efficiency with which DNA enters the bacterium through pores in its cell wall.
+---
+
+---Q 106 3 Marks 2025
+Explain giving three reasons why tropics show greatest levels of species diversity.
+---
+---Ans
+1. Speciation is generally a function of time; tropical latitudes have remained undisturbed for millions of years.
+2. Tropical environments are more constant and predictable (less seasonal).
+3. There is more solar energy available in the tropics, which contributes to higher productivity.
+---
+
+---Q 107 5 Marks 2025
+Describe the arrangement of nuclei and cells in a mature embryo sac of a typical angiosperm.
+---
+---Ans
+A mature embryo sac is 8-nucleate and 7-celled.
+It consists of the egg apparatus (two synergids and one egg cell) at the micropylar end, three antipodal cells at the chalazal end, and a large central cell containing two polar nuclei.
+---
+
+---Q 108 5 Marks 2025
+(i) Label A, B, C and D in the sectional view of a seminiferous tubule.
+(ii) What will be the number of chromosomes in secondary spermatocyte and spermatid respectively?
+(iii) Explain the terms Spermiogenesis and Spermiation.[cite: 9]
+---
+---Ans
+(i) A: Spermatozoa; B: Spermatid; C: Secondary spermatocyte; D: Primary spermatocyte[cite: 9].
+(ii) Secondary spermatocyte: 23 chromosomes; Spermatid: 23 chromosomes[cite: 9].
+(iii) Spermiogenesis is the transformation of spermatids into spermatozoa; Spermiation is the release of mature sperms from the seminiferous tubules[cite: 9].
+---
+
+Yes, there are several more questions from the remaining sets in your provided documents. Here is the next installment of extracted questions following the same format:
+
+---Q 109 2 Marks 2022
+State the impact of constant mechanical agitation and pumping of air in the aeration tank on the sewage during the biological treatment[cite: 2].
+---
+---Ans
+It allows vigorous growth of useful aerobic microbes into flocs[cite: 2]. These microbes consume the major part of the organic matter in the effluent, which significantly reduces the BOD (Biochemical Oxygen Demand) of the sewage[cite: 2].
+---
+
+---Q 110 3 Marks 2022
+Enumerate the main sources of bio-fertilisers giving one example of each[cite: 2].
+---
+---Ans
+The main sources are:
+1. Bacteria: Rhizobium (symbiotic) or Azotobacter (free-living)[cite: 2].
+2. Fungi: Mycorrhiza (e.g., Genus Glomus)[cite: 2].
+3. Cyanobacteria: Anabaena, Nostoc, or Oscillatoria[cite: 2].
+---
+
+---Q 111 1 Mark 2023
+The primary productivity in an ecosystem is expressed as:
+(a) gm^-2 yr^-1 (b) gm^-2 yr (c) K cal m^-2 yr^-1 (d) K cal m^-2[cite: 4]
+---
+---Ans
+(c) K cal m^-2 yr^-1[cite: 4]
+Primary productivity is the rate of biomass production per unit area over a time period, expressed in terms of weight or energy[cite: 4].
+---
+
+---Q 112 1 Mark 2023
+Select the pathogen mismatched with the symptoms of disease caused by it from the list given below :
+(a) Entamoeba histolytica: Constipation, abdominal pain.
+(b) Epidermophyton: Dry scaly lesions on nail.
+(c) Wuchereria bancrofti: Chronic inflammation of lymphatic vessels of lower limb.
+(d) Haemophilus influenzae: Blockage of the intestinal passage[cite: 4].
+---
+---Ans
+(d) Haemophilus influenzae: Blockage of the intestinal passage[cite: 4]
+Haemophilus influenzae causes pneumonia (infecting the alveoli of lungs); blockage of the intestinal passage is a symptom of Ascariasis[cite: 4].
+---
+
+---Q 113 1 Mark 2023
+Assertion (A): Determining the sex of an unborn child followed by MTP is an illegal practice.
+Reason (R): Amniocentesis is a practice to test the presence of genetic disorders also[cite: 4].
+---
+---Ans
+(b) Both (A) and (R) are true, but (R) is not the correct explanation of (A)[cite: 4]
+While both statements are true, the reason for the illegality is to prevent female foeticide, not because the test can also detect genetic disorders[cite: 4].
+---
+
+---Q 114 2 Marks 2023
+Why is a malignant tumour considered to be more damaging than a benign tumour? Explain[cite: 4].
+---
+---Ans
+Malignant tumours grow rapidly, invade and damage surrounding normal tissues, and exhibit metastasis[cite: 4]. Cells sloughed from these tumours reach distant sites through blood and start new tumours elsewhere in the body[cite: 4].
+---
+
+---Q 115 3 Marks 2023
+Human Genome Project (HGP) was a mega project launched in the year 1990 with some important goals.
+(a) Enlist any four prime goals of HGP.
+(b) Name any one common non-human animal model organism which has also been sequenced thereafter[cite: 4].
+---
+---Ans
+(a) Goals: 1. Identify all the approximately 20,000-25,000 genes in human DNA. 2. Determine the sequences of the 3 billion chemical base pairs. 3. Store this information in databases. 4. Improve tools for data analysis[cite: 4].
+(b) Drosophila (fruit fly) or Caenorhabditis elegans (nematode)[cite: 4].
+---
+
+---Q 116 1 Mark 2024
+A human male decides to adopt a surgical method for contraception. Identify the point in the diagram where a cut would be made and tied. (Referencing male reproductive system diagram)[cite: 5]
+---
+---Ans
+Point Q (Vas deferens)[cite: 5]
+This procedure is called Vasectomy, where a small part of the vas deferens is removed or tied up[cite: 5].
+---
+
+---Q 117 1 Mark 2024
+Which of the following structures is well-developed in a mature seed of black pepper?
+(a) Perisperm (b) Sepals (c) Thalamus (d) Peduncle[cite: 5]
+---
+---Ans
+(a) Perisperm[cite: 5]
+In some seeds like black pepper and beet, remnants of the nucellus persist as perisperm[cite: 5].
+---
+
+---Q 118 3 Marks 2024
+Identify a, b, c, d, e and f in the table given below:
+1. Monascus purpureus — (a) — (b)
+2. (c) — (d) — Antibiotic
+3. (e) — Cyclosporin A — (f)[cite: 7]
+---
+---Ans
+(a) Statins; (b) Blood cholesterol lowering agent; (c) Penicillium notatum; (d) Penicillin; (e) Trichoderma polysporum; (f) Immunosuppressive agent[cite: 7].
+---
+---Q 119 1 Mark 2024
+The periodic abstinence by a couple for family planning should be from:
+(A) Day 5 to 10 of menstrual cycle
+(B) Day 13 to 15 of menstrual cycle
+(C) Day 10 to 17 of menstrual cycle
+(D) Day 16 to 20 of menstrual cycle[cite: 7]
+---
+---Ans
+(C) Day 10 to 17 of menstrual cycle[cite: 7]
+This is the period when ovulation is most likely to occur, and the chances of fertilization are very high.[cite: 7]
+---
+
+---Q 120 1 Mark 2024
+Select the incorrect match from the following:
+(A) 45 + XX — Broad palm with characteristic palm crease
+(B) 44 + XXY — Overall feminine development
+(C) 44 + XO — Sterile females as ovaries are rudimentary
+(D) 44 + XY — Normal male[cite: 7]
+---
+---Ans
+(A) 45 + XX — Broad palm with characteristic palm crease[cite: 7]
+Broad palm with a crease is a character of Down’s syndrome, which is caused by trisomy of chromosome 21 (47 chromosomes), not 45.[cite: 7]
+---
+
+---Q 121 1 Mark 2024
+The type of bond represented by the dotted line '----' in a schematic polynucleotide chain is:
+(A) Hydrogen bond
+(B) Peptide bond
+(C) N-glycosidic linkage
+(D) Phosphodiester bond[cite: 7]
+---
+---Ans
+(A) Hydrogen bond[cite: 7]
+Hydrogen bonds connect the nitrogenous bases of two complementary strands in a DNA molecule.[cite: 7]
+---
+
+---Q 122 1 Mark 2024
+In which of the following conditions/diseases is there a substantial increase in the activity of mast cells observed in the human body?
+(A) Typhoid
+(B) Allergy
+(C) Ascariasis
+(D) AIDS[cite: 7]
+---
+---Ans
+(B) Allergy[cite: 7]
+Allergic reactions involve the release of chemicals like histamine and serotonin from mast cells.[cite: 7]
+---
+
+---Q 123 1 Mark 2024
+Lactobacillus that sets milk into curd is categorised as:
+(A) Cyanobacteria
+(B) Archaebacteria
+(C) Chemosynthetic bacteria
+(D) Heterotrophic bacteria[cite: 7]
+---
+---Ans
+(D) Heterotrophic bacteria[cite: 7]
+Lactobacillus depends on organic nutrients present in milk for its growth and energy.[cite: 7]
+---
+
+---Q 124 1 Mark 2024
+Which one of the following transgenic animals is being used to test the safety of the polio vaccine?
+(A) Sheep
+(B) Goat
+(C) Pig
+(D) Mice[cite: 7]
+---
+---Ans
+(D) Mice[cite: 7]
+Transgenic mice are specifically developed to be susceptible to the polio virus to verify vaccine safety before human use.[cite: 7]
+---
+
+---Q 125 2 Marks 2024
+Identify A, B, C and D in the table given below:
+Terms | Part of the plant it represents
+Pericarp | 'A'
+B' | Cotyledon in seed of grass family
+Embryonal axis | 'C'
+D' | Remains of nucellus in a seed[cite: 7]
+---
+---Ans
+A: Fruit wall[cite: 7]
+B: Scutellum[cite: 7]
+C: Tigellum (or Plumule/Radicle axis)[cite: 7]
+D: Perisperm[cite: 7]
+---
+
+---Q 126 3 Marks 2024
+In a family, the father, the daughter and the son are colour blind, whereas the mother has normal vision. Do you think the son and the daughter have inherited the disease from their father? Work out a cross to justify your answer.[cite: 7]
+---
+---Ans
+The daughter inherited one allele from the father and one from the mother (carrier); the son inherited his allele only from the mother.[cite: 7]
+Color blindness is an X-linked recessive trait; fathers pass their X-chromosome only to daughters, while sons receive the Y-chromosome from the father.[cite: 7]
+---
+
+---Q 127 4 Marks 2024
+Why is the species richness maximum in Region III (Tropic region) in the bar graph?[cite: 7]
+---
+---Ans
+Tropical latitudes have remained relatively undisturbed for millions of years, allow more time for speciation, and receive more solar energy which contributes to higher productivity.[cite: 7]
+---
+
+---Q 128 4 Marks 2024
+Identify the colony that has got transformed in the selective plating diagram. Justify your answer.[cite: 7]
+---
+---Ans
+Colony 2 (Example based on diagram).[cite: 7]
+It grows on the plate containing ampicillin but fails to grow on the plate containing tetracycline because the gene was inactivated by the DNA insert.[cite: 7]
+---
+
+---Q 129 1 Mark 2025
+PBR which is frequently used as a vector for cloning gene in E. coli is a/an:
+(A) Original bacterial plasmid
+(B) Modified bacterial plasmid
+(C) Viral genome
+(D) Transposon[cite: 9]
+---
+---Ans
+(B) Modified bacterial plasmid[cite: 9]
+pBR322 is an artificially constructed plasmid used extensively for gene cloning.[cite: 9]
+---
+
+---Q 130 1 Mark 2025
+Identify the correct labellings in the figure of a fertilised embryo sac of an angiosperm:
+(A) A - zygote, B - degenerating synergids, C - degenerating antipodals, D - PEN
+(B) A - degenerating synergids, B - zygote, C - PEN, D - degenerating antipodals
+(C) A - degenerating antipodals, B - PEN, C - degenerating synergids, D - zygote
+(D) A - degenerating synergids, B - zygote, C - degenerating antipodals, D - PEN[cite: 8]
+---
+---Ans
+(D) A - degenerating synergids, B - zygote, C - degenerating antipodals, D - PEN[cite: 8]
+After fertilization, synergids and antipodals degenerate while the zygote and Primary Endosperm Nucleus (PEN) develop.[cite: 8]
+---
+
+---Q 131 5 Marks 2025
+(i) Label A, B, C and D in the sectional view of a seminiferous tubule.
+(ii) What will be the number of chromosomes in secondary spermatocyte and spermatid respectively?
+(iii) Explain the terms Spermiogenesis and Spermiation.[cite: 9]
+---
+---Ans
+(i) A: Spermatozoa, B: Spermatid, C: Secondary spermatocyte, D: Primary spermatocyte[cite: 9]
+(ii) 23 and 23[cite: 9]
+(iii) Spermiogenesis: transformation of spermatids into spermatozoa.[cite: 9] Spermiation: release of mature sperms from the seminiferous tubules.[cite: 9]
+---
+
+---Q 132 1 Mark 2021
+How does pollination take place in water hyacinth and water lily?[cite: 1]
+---
+---Ans
+By insects or wind.[cite: 1]
+Even though they are aquatic plants, their flowers emerge above water level to be pollinated by terrestrial agents.[cite: 1]
+---
+
+---Q 133 1 Mark 2021
+Predict the effect if, the codon UAU coding for an amino acid at the 25th position of a polypeptide of 50 amino acids, is mutated to UAA.[cite: 1]
+---
+---Ans
+Polypeptide synthesis will stop at the 24th amino acid.[cite: 1]
+UAA is a stop (nonsense) codon which leads to premature termination of the translation process.[cite: 1]
+---
+
+---Q 134 2 Marks 2022
+(a) Cattle excreta is important source for producing a domestic fuel. Name the fuel and write its main components.
+(b) Write the biological process that is responsible for the production of this fuel.[cite: 2]
+---
+---Ans
+(a) Biogas (Gobar gas); Methane, $CO_2$, and $H_2$.[cite: 2]
+(b) Anaerobic digestion (Methanogenesis) by methanogens.[cite: 2]
+---
+
+---Q 135 2 Marks 2022
+What is the importance of female Anopheles mosquitoes in the life of a malarial Parasite Plasmodium?[cite: 2]
+---
+---Ans
+It acts as the biological vector and the host for sexual reproduction.[cite: 2]
+The parasite undergoes fertilization and development in the mosquito's body before being transmitted as sporozoites to humans.[cite: 2]
+---
+
+---Q 136 3 Marks 2023
+Explain the steps involved in making sure that only the desired pollen grain pollinate the stigma of a bisexual flower by a plant breeder.[cite: 4]
+---
+---Ans
+The breeder uses Emasculation (removal of anthers from the bud) and Bagging (covering the flower with a bag).[cite: 4]
+When the stigma becomes receptive, mature pollen from the desired parent is dusted onto it and the flower is rebagged.[cite: 4]
+---
+
+---Q 137 1 Mark 2024
+The periodic abstinence by a couple for family planning should be from:
+(A) Day 5 to 10 of menstrual cycle
+(B) Day 13 to 15 of menstrual cycle
+(C) Day 10 to 17 of menstrual cycle
+(D) Day 16 to 20 of menstrual cycle[cite: 7]
+---
+---Ans
+(C) Day 10 to 17 of menstrual cycle.[cite: 7]
+This is the "fertile window" where the probability of fertilization is highest following ovulation.[cite: 7]
+---
+
+---Q 138 3 Marks 2024
+Identify a, b, c, d, e and f in the table given below:
+1. Monascus purpureus — a — b
+2. c — d — Antibiotic
+3. e — Cyclosporin A — f[cite: 7]
+---
+---Ans
+a: Statins; b: Blood cholesterol lowering agent.[cite: 7]
+c: Penicillium notatum; d: Penicillin.[cite: 7]
+e: Trichoderma polysporum; f: Immunosuppressive agent.[cite: 7]
+---
+
+---Q 139 5 Marks 2024
+Evaluate the suitability of DNA and RNA as genetic material and justify the suitability of the one that is preferred as an ideal genetic material.[cite: 1]
+---
+---Ans
+DNA is preferred as the ideal genetic material because it is chemically less reactive and structurally more stable than RNA.[cite: 1]
+DNA has thymine instead of uracil and lacks the 2'-OH group present in RNA, making it resistant to easy degradation.[cite: 1]
+---
+
+---Q 140 1 Mark 2025
+Which one of the following was not present during the Mesozoic Era of the geological time scale?
+(a) Ferns (b) Horsetails (c) Ginkgos (d) Bryophytes[cite: 8]
+---
+---Ans
+(d) Bryophytes.[cite: 8]
+While they existed, they were not the dominant or characteristic flora of the Mesozoic compared to the others listed.[cite: 8]
+---
+
+---Q 141 5 Marks 2025
+(a) Explain how is a bacterial cell made 'competent' to take up recombinant DNA from the medium.
+(b) Explain the steps of amplification of gene of interest using PCR technique.[cite: 8]
+---
+---Ans
+(a) Bacterial cells are treated with a divalent cation (like $Ca^{2+}$) and given a heat shock at $42^\circ C$.[cite: 8]
+(b) PCR involves: 1. Denaturation (heating to separate strands), 2. Annealing (primers bind to strands), 3. Extension (Taq polymerase synthesizes new DNA).[cite: 8]
+---
+
+

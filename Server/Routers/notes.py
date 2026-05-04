@@ -6,6 +6,9 @@ POST /api/generate/notes
     Streams structured JSON note blocks via Server-Sent Events (SSE).
     Each SSE event contains one batch of blocks (5 chunks worth).
     Final event is type "done".
+
+    When a cached result exists the endpoint returns a plain JSON response
+    instead of SSE, for instant delivery.
 """
 
 from __future__ import annotations
@@ -16,10 +19,11 @@ import uuid
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, JSONResponse
 from pydantic import BaseModel
 
 from Routers.deps import PgDep
+from Core.cache import cache_store
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +68,9 @@ async def generate_notes(
     Each SSE `data` event contains a JSON array of blocks for one batch.
     A final `event: done` signals completion.
 
+    When a cached result exists, returns a JSON response with
+    ``{ "cached": true, "blocks": [...] }`` for instant delivery.
+
     Example stream::
 
         data: [{"type":"concept","title":"...","content":["..."],"importance":"high"}]
@@ -90,20 +97,34 @@ async def generate_notes(
             detail=f"Chapter {chapter_id} not found.",
         )
 
+    # ── Cache check ──────────────────────────────────────────────────
+    cache_key = cache_store.make_key("notes", str(chapter_id))
+    cached = cache_store.get("notes", cache_key)
+    if cached is not None:
+        logger.info("Cache HIT  notes %s", chapter_id)
+        return JSONResponse(content={"cached": True, "blocks": cached})
+
+    # ── Cache miss — stream and accumulate ───────────────────────────
     gen = _get_generator()
 
     async def _event_stream():
         total_blocks = 0
+        all_blocks = []
         try:
             async for batch_blocks in gen.generate_stream(
                 pg, chapter_id, api_base_url="http://localhost:8000",
             ):
                 total_blocks += len(batch_blocks)
+                all_blocks.extend(batch_blocks)
                 yield f"data: {json.dumps(batch_blocks)}\n\n"
 
         except Exception as e:
             logger.error("Notes streaming failed: %s", e)
             yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"
+
+        # Cache the complete result after streaming finishes
+        if all_blocks:
+            await cache_store.put("notes", cache_key, all_blocks)
 
         yield f"event: done\ndata: {json.dumps({'total_blocks': total_blocks})}\n\n"
 

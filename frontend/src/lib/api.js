@@ -581,6 +581,7 @@ const quiz = {
    * Generate an MCQ quiz for a chapter.
    *
    * @param {string} chapterId - UUID
+   * @param {{ forceNew?: boolean }} [opts]
    * @returns {Promise<Array<{
    *   id: number,
    *   question: string,
@@ -589,8 +590,9 @@ const quiz = {
    *   explanation: string
    * }>>}
    */
-  generate(chapterId) {
-    return request("/quiz/generate", {
+  generate(chapterId, opts = {}) {
+    const query = opts.forceNew ? "?force_new=true" : "";
+    return request(`/quiz/generate${query}`, {
       method: "POST",
       json: { chapter_id: chapterId },
     });

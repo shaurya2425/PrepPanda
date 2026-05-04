@@ -20,6 +20,7 @@ from pydantic import BaseModel, Field
 
 from Core.Analysis.analyzer import PYQAnalyzer
 from Routers.deps import PgDep
+from Core.cache import cache_store
 
 logger = logging.getLogger(__name__)
 
@@ -179,12 +180,20 @@ async def analyse_book(
     if not book:
         raise HTTPException(status_code=404, detail=f"Book {book_id} not found.")
 
+    cache_key = cache_store.make_key("analysis_book", str(book_id), str(zone_radius), str(top_k))
+    cached = cache_store.get("pyqs", cache_key)
+    if cached is not None:
+        logger.info("Cache HIT  analysis book %s", book_id)
+        return AnalysisReportOut(**cached)
+
     analyzer = _get_analyzer()
     report = await analyzer.full_report(
         pg, book_id, zone_radius=zone_radius, top_k=top_k,
     )
 
-    return _report_to_out(report)
+    result = _report_to_out(report)
+    await cache_store.put("pyqs", cache_key, result.model_dump(mode="json"))
+    return result
 
 
 @router.get(
@@ -208,13 +217,21 @@ async def analyse_chapter(
 
     book_id = ch["book_id"]
 
+    cache_key = cache_store.make_key("analysis_chapter", str(chapter_id), str(zone_radius), str(top_k))
+    cached = cache_store.get("pyqs", cache_key)
+    if cached is not None:
+        logger.info("Cache HIT  analysis chapter %s", chapter_id)
+        return AnalysisReportOut(**cached)
+
     analyzer = _get_analyzer()
     report = await analyzer.full_report(
         pg, book_id, chapter_id=chapter_id,
         zone_radius=zone_radius, top_k=top_k,
     )
 
-    return _report_to_out(report)
+    result = _report_to_out(report)
+    await cache_store.put("pyqs", cache_key, result.model_dump(mode="json"))
+    return result
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -248,9 +265,17 @@ async def book_patterns(
     if not book:
         raise HTTPException(status_code=404, detail=f"Book {book_id} not found.")
 
+    cache_key = cache_store.make_key("patterns_book", str(book_id))
+    cached = cache_store.get("pyqs", cache_key)
+    if cached is not None:
+        logger.info("Cache HIT  patterns book %s", book_id)
+        return cached
+
     pa = _get_pattern_analyzer()
     report = await pa.generate_report(pg, book_id)
-    return asdict(report)
+    result = asdict(report)
+    await cache_store.put("pyqs", cache_key, result)
+    return result
 
 
 @router.get(
@@ -266,6 +291,14 @@ async def chapter_patterns(
     if not ch:
         raise HTTPException(status_code=404, detail=f"Chapter {chapter_id} not found.")
 
+    cache_key = cache_store.make_key("patterns_chapter", str(chapter_id))
+    cached = cache_store.get("pyqs", cache_key)
+    if cached is not None:
+        logger.info("Cache HIT  patterns chapter %s", chapter_id)
+        return cached
+
     pa = _get_pattern_analyzer()
     report = await pa.generate_report(pg, ch["book_id"], chapter_id=chapter_id)
-    return asdict(report)
+    result = asdict(report)
+    await cache_store.put("pyqs", cache_key, result)
+    return result

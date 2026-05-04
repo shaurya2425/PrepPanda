@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CheckCircle2, XCircle, ArrowRight, Sparkles, Loader2 } from "lucide-react";
+import { CheckCircle2, XCircle, ArrowRight, Sparkles, Loader2, RefreshCw, LogOut } from "lucide-react";
 
 import { api } from "@/lib/api";
 
@@ -16,13 +16,17 @@ export function QuizTab({ title = 'this chapter', chapterId }) {
 
   const question = quizData[currentQuestion];
 
-  const handleGenerate = async () => {
+  const handleGenerate = async (forceNew = false) => {
     setIsGenerating(true);
     setError(null);
     try {
-      const data = await api.quiz.generate(chapterId);
+      const data = await api.quiz.generate(chapterId, { forceNew });
       if (data && data.length > 0) {
         setQuizData(data);
+        setCurrentQuestion(0);
+        setSelectedAnswer(null);
+        setShowResult(false);
+        setScore(0);
         setIsGenerated(true);
       } else {
         setError("Could not generate quiz from available content.");
@@ -33,6 +37,16 @@ export function QuizTab({ title = 'this chapter', chapterId }) {
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const handleQuit = () => {
+    setIsGenerated(false);
+    setQuizData([]);
+    setCurrentQuestion(0);
+    setSelectedAnswer(null);
+    setShowResult(false);
+    setScore(0);
+    setError(null);
   };
 
   if (!isGenerated) {
@@ -54,7 +68,7 @@ export function QuizTab({ title = 'this chapter', chapterId }) {
           )}
 
           <button  
-            onClick={handleGenerate} disabled={isGenerating}
+            onClick={() => handleGenerate(false)} disabled={isGenerating}
             className="w-full h-14 rounded-2xl text-[17px] font-bold flex items-center justify-center gap-2 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
             style={{ background: 'var(--gradient-primary)', color: '#FFFFFF', boxShadow: 'var(--shadow-glow)' }}>
             {isGenerating ? <><Loader2 className="w-5 h-5 animate-spin" /> Generating Quiz...</> : <><Sparkles className="w-5 h-5" /> Generate Quiz</>}
@@ -95,6 +109,10 @@ export function QuizTab({ title = 'this chapter', chapterId }) {
     }
     return { background: 'var(--gradient-card)', borderColor: 'var(--border)', color: 'var(--text-primary)', boxShadow: 'none' };
   };
+
+  // Check if quiz is complete (on the last question and result is shown)
+  const isQuizComplete = currentQuestion === quizData.length - 1 && showResult;
+  const finalScore = score + (showResult && selectedAnswer === question.correct ? 1 : 0);
 
   return (
     <div className="h-full overflow-auto flex items-center justify-center p-6" style={{ background: 'var(--bg-primary)' }}>
@@ -174,7 +192,7 @@ export function QuizTab({ title = 'this chapter', chapterId }) {
           >
             Submit Answer
           </button>
-        ) : currentQuestion < quizData.length - 1 ? (
+        ) : !isQuizComplete ? (
           <button
             onClick={handleNext}
             className="w-full h-14 rounded-2xl text-lg font-semibold flex items-center justify-center gap-2 transition-all duration-200 active:scale-[0.99]"
@@ -188,11 +206,35 @@ export function QuizTab({ title = 'this chapter', chapterId }) {
           }}>
             <div className="text-5xl mb-4">🎉</div>
             <h3 className="text-2xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>Quiz Complete!</h3>
-            <p className="text-lg" style={{ color: 'var(--text-secondary)' }}>
+            <p className="text-lg mb-8" style={{ color: 'var(--text-secondary)' }}>
               You scored <span className="font-bold" style={{ color: 'var(--accent-success)' }}>
-                {score + (selectedAnswer === question.correct ? 1 : 0)}
+                {finalScore}
               </span> out of {quizData.length}
             </p>
+
+            {/* ── Quiz flow controls ── */}
+            <div className="flex gap-3">
+              <button
+                onClick={() => handleGenerate(true)}
+                disabled={isGenerating}
+                className="flex-1 h-14 rounded-2xl text-[17px] font-bold flex items-center justify-center gap-2 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
+                style={{ background: 'var(--gradient-primary)', color: '#FFFFFF', boxShadow: 'var(--shadow-glow)' }}
+              >
+                {isGenerating ? (
+                  <><Loader2 className="w-5 h-5 animate-spin" /> Generating...</>
+                ) : (
+                  <><RefreshCw className="w-5 h-5" /> Generate New Quiz</>
+                )}
+              </button>
+              <button
+                onClick={handleQuit}
+                disabled={isGenerating}
+                className="h-14 px-8 rounded-2xl text-[17px] font-bold flex items-center justify-center gap-2 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] border"
+                style={{ borderColor: 'var(--border)', color: 'var(--text-primary)', background: 'var(--bg-secondary)' }}
+              >
+                <LogOut className="w-5 h-5" /> Quit
+              </button>
+            </div>
           </div>
         )}
       </div>

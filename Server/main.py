@@ -42,6 +42,7 @@ from Routers import mindmap as mindmap_router
 from Routers import srs as srs_router
 from Routers import quiz as quiz_router
 from Routers import notes as notes_router
+from Core.cache import cache_store
 
 logging.basicConfig(
     level=logging.INFO,
@@ -58,6 +59,10 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("⚡ PrepPanda server starting up …")
+
+    # In-memory cache (+ cache.json)
+    cache_store.initialize()
+    app.state.cache = cache_store
 
     # Postgres
     pg = PostgresHandler()
@@ -78,6 +83,7 @@ async def lifespan(app: FastAPI):
     yield  # ← server is live
 
     logger.info("🛑 Shutting down …")
+    cache_store.shutdown()
     await pg.disconnect()
     logger.info("✅ Postgres pool closed")
 

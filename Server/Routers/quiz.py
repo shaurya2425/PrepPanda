@@ -7,15 +7,17 @@ from __future__ import annotations
 import json
 import logging
 import os
+import time
 import uuid
 import re
 from typing import List
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from google import genai
 
 from Routers.deps import PgDep
+from Core.cache import cache_store
 
 logger = logging.getLogger(__name__)
 
@@ -32,11 +34,27 @@ class QuizQuestionOut(BaseModel):
     explanation: str
 
 @router.post("/generate", response_model=List[QuizQuestionOut], summary="Generate adaptive quiz")
-async def generate_quiz(req: GenerateQuizRequest, pg: PgDep):
+async def generate_quiz(
+    req: GenerateQuizRequest,
+    pg: PgDep,
+    force_new: bool = Query(False, description="Bypass cache and generate a fresh quiz"),
+):
     """
     Generate an MCQ quiz using 60% PYQ-linked chunks and 40% random chunks.
     Uses gemini-3-flash-preview for a single-call generation.
+
+    When ``force_new=True`` the cache is bypassed and a fresh quiz is stored
+    under a versioned key so it doesn't overwrite the original cached quiz.
     """
+    cache_key = cache_store.make_key("quiz", str(req.chapter_id))
+
+    # Check cache (only when not forcing a new quiz)
+    if not force_new:
+        cached = cache_store.get("quizzes", cache_key)
+        if cached is not None:
+            logger.info("Cache HIT  quiz %s", req.chapter_id)
+            return [QuizQuestionOut(**q) for q in cached]
+
     try:
         # Fetch up to 3 PYQ-linked chunks (60% of 5)
         pyq_chunks = await pg.get_pyq_linked_chunks(req.chapter_id, limit=3)
@@ -70,11 +88,15 @@ async def generate_quiz(req: GenerateQuizRequest, pg: PgDep):
 
         context_text = "\n\n".join(context_blocks)
 
+        # Use slightly higher temperature for force_new to ensure variety
+        temperature = 0.7 if force_new else 0.3
+
         prompt = f"""You are an expert exam question creator.
 I will give you data about topics from a textbook chapter. Some are highly relevant because they appeared in previous year questions (PYQs), and some are random topics.
 
 Based on this text, generate exactly 5 multiple choice questions (MCQs).
 Ensure the mix is roughly 60% (3 questions) from the PYQ-linked topics and 40% (2 questions) from the random topics.
+{"IMPORTANT: Generate completely DIFFERENT questions from any previous quiz. Focus on different aspects, details, and angles of the topics." if force_new else ""}
 
 IMPORTANT RULES:
 1. Each question must have exactly 4 options.
@@ -108,7 +130,7 @@ Respond ONLY with valid JSON (no markdown fencing)."""
                 {"role": "user", "parts": [{"text": prompt}]}
             ],
             config=genai.types.GenerateContentConfig(
-                temperature=0.3,
+                temperature=temperature,
                 max_output_tokens=4096,
                 response_mime_type="application/json",
             ),
@@ -143,6 +165,15 @@ Respond ONLY with valid JSON (no markdown fencing)."""
                 correct=correct_idx,
                 explanation=item.get("Explanation", "No explanation provided.")
             ))
+
+        # Cache the result
+        serialised = [q.model_dump() for q in output]
+        if force_new:
+            # Store under a versioned key so we don't overwrite the base quiz
+            versioned_key = cache_store.make_key("quiz", str(req.chapter_id), str(time.time()))
+            await cache_store.put("quizzes", versioned_key, serialised)
+        else:
+            await cache_store.put("quizzes", cache_key, serialised)
 
         return output
 

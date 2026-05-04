@@ -23,6 +23,7 @@ from pydantic import BaseModel, Field
 from groq import Groq
 
 from Routers.deps import PgDep
+from Core.cache import cache_store
 
 logger = logging.getLogger(__name__)
 
@@ -71,18 +72,26 @@ async def get_mindmap(
     chapter_id: uuid.UUID,
     pg: PgDep,
 ) -> MindMapOut:
+    cache_key = cache_store.make_key("mindmap_tree", str(chapter_id))
+    cached = cache_store.get("mindmaps", cache_key)
+    if cached is not None:
+        logger.info("Cache HIT  mindmap tree %s", chapter_id)
+        return MindMapOut(**cached)
+
     chapter_row, chunk_rows = await _fetch_chapter_data(pg, chapter_id)
     chapter_title = chapter_row["title"]
 
     tree = await _get_or_generate_concept_graph(chapter_id, chapter_row, chunk_rows, pg)
 
-    return MindMapOut(
+    result = MindMapOut(
         chapter_id=chapter_id,
         chapter_title=chapter_title,
         node_count=_count_nodes(tree),
         leaf_count=_count_leaves(tree),
         tree=tree,
     )
+    await cache_store.put("mindmaps", cache_key, result.model_dump(mode="json"))
+    return result
 
 
 @router.get(
@@ -94,6 +103,12 @@ async def get_mindmap_flat(
     chapter_id: uuid.UUID,
     pg: PgDep,
 ) -> MindMapFlatOut:
+    cache_key = cache_store.make_key("mindmap_flat", str(chapter_id))
+    cached = cache_store.get("mindmaps", cache_key)
+    if cached is not None:
+        logger.info("Cache HIT  mindmap flat %s", chapter_id)
+        return MindMapFlatOut(**cached)
+
     chapter_row, chunk_rows = await _fetch_chapter_data(pg, chapter_id)
     chapter_title = chapter_row["title"]
 
@@ -102,11 +117,13 @@ async def get_mindmap_flat(
     flat: List[FlatNode] = []
     _flatten(tree, parent_id=None, acc=flat)
 
-    return MindMapFlatOut(
+    result = MindMapFlatOut(
         chapter_id=chapter_id,
         chapter_title=chapter_title,
         nodes=flat,
     )
+    await cache_store.put("mindmaps", cache_key, result.model_dump(mode="json"))
+    return result
 
 
 # ── Chunk-range mindmap ──────────────────────────────────────────────
