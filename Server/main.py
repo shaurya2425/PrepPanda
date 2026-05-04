@@ -41,6 +41,7 @@ from Routers import catalog as catalog_router
 from Routers import mindmap as mindmap_router
 from Routers import srs as srs_router
 from Routers import quiz as quiz_router
+from Routers import notes as notes_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -115,6 +116,7 @@ app.include_router(catalog_router.router)
 app.include_router(srs_router.router)
 app.include_router(mindmap_router.router)
 app.include_router(quiz_router.router)
+app.include_router(notes_router.router)
 
 
 # ─────────────────────────────────────────────────────────────────────
