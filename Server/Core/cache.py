@@ -38,7 +38,7 @@ logger = logging.getLogger(__name__)
 
 CACHE_FILE = Path(__file__).resolve().parent.parent / "cache.json"
 
-SECTIONS = ("mindmaps", "notes", "quizzes", "pyqs")
+SECTIONS = ("mindmaps", "notes", "quizzes", "pyqs", "quiz_analytics")
 
 
 class CacheStore:

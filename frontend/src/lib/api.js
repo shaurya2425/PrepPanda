@@ -587,12 +587,52 @@ const quiz = {
    *   question: string,
    *   options: string[],
    *   correct: number,
-   *   explanation: string
+   *   explanation: string,
+   *   topic: string
    * }>>}
    */
   generate(chapterId, opts = {}) {
     const query = opts.forceNew ? "?force_new=true" : "";
     return request(`/quiz/generate${query}`, {
+      method: "POST",
+      json: { chapter_id: chapterId },
+    });
+  },
+
+  /**
+   * Submit quiz answers and receive performance analytics.
+   *
+   * @param {string} chapterId - UUID
+   * @param {Array<{ question_id: number, selected: number }>} answers
+   * @returns {Promise<{
+   *   score: number, total: number, accuracy: number,
+   *   strengths: string[], weak_topics: Record<string, number>,
+   *   insights: string[], attempt_number: number,
+   *   per_question: Array<{
+   *     question_id: number, question: string, selected: number,
+   *     correct: number, is_correct: boolean, topic: string,
+   *     explanation: string, options: string[]
+   *   }>
+   * }>}
+   */
+  submit(chapterId, answers) {
+    return request("/quiz/submit", {
+      method: "POST",
+      json: { chapter_id: chapterId, answers },
+    });
+  },
+
+  /**
+   * Generate an adaptive quiz focused on weak areas (~70% weak, ~30% other).
+   *
+   * @param {string} chapterId - UUID
+   * @returns {Promise<Array<{
+   *   id: number, question: string, options: string[],
+   *   correct: number, explanation: string, topic: string
+   * }>>}
+   */
+  generateAdaptive(chapterId) {
+    return request("/quiz/generate-adaptive", {
       method: "POST",
       json: { chapter_id: chapterId },
     });
